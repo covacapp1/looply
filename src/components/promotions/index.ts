@@ -1,1 +1,0 @@
-export { PromotionCard } from "./PromotionCard";

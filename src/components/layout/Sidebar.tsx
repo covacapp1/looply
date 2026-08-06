@@ -7,8 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 const navItems = [
   { label: "Menú", href: "/" },
-  { label: "Configurar", href: "/loyalty" },
-  { label: "Agregar Sello", href: "/loyalty/add-stamp" },
+  { label: "Tarjetas de Fidelidad", href: "/loyalty" },
   { label: "Menú Digital", href: "/menu" },
   { label: "Carta de Precios", href: "/menu/pricing" },
   { label: "Promociones", href: "/promotions" },

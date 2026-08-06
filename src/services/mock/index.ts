@@ -1,1 +1,1 @@
-export { mockBusiness, mockDashboardMetrics, mockCustomers, mockLoyaltyProgram, mockMenuCategories, mockPromotions, mockQRCodes, mockStampProgram, mockStampHistory, mockActivities } from "./mock-data";
+export { mockRewards, mockCustomers, mockStampHistory } from "./mock-data";

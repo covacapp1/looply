@@ -25,8 +25,7 @@ export const DAYS_OF_WEEK = [
 
 export const NAV_ITEMS = [
   { label: "Menú", href: "/", icon: "LayoutDashboard" },
-  { label: "Configurar", href: "/loyalty", icon: "Settings" },
-  { label: "Agregar Sello", href: "/loyalty/add-stamp", icon: "PlusCircle" },
+  { label: "Tarjetas de Fidelidad", href: "/loyalty", icon: "Heart" },
   { label: "Menú Digital", href: "/menu", icon: "UtensilsCrossed" },
   { label: "Carta de Precios", href: "/menu/pricing", icon: "DollarSign" },
   { label: "Promociones", href: "/promotions", icon: "Tag" },
