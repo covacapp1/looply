@@ -7,10 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { mockBusiness } from "@/services/mock";
 
 export default function SettingsPage() {
-  const business = mockBusiness;
   const [activeTab, setActiveTab] = useState("business");
 
   return (
@@ -42,39 +40,39 @@ export default function SettingsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nombre del Negocio</Label>
-                  <Input id="name" defaultValue={business.name} />
+                  <Input id="name" placeholder="Ej: Mi Negocio" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="slug">URL / Slug</Label>
-                  <Input id="slug" defaultValue={business.slug} />
+                  <Input id="slug" placeholder="Ej: mi-negocio" />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Descripción</Label>
-                <Textarea id="description" defaultValue={business.description} rows={3} />
+                <Textarea id="description" placeholder="Describe tu negocio..." rows={3} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="phone">Teléfono</Label>
-                  <Input id="phone" defaultValue={business.phone} />
+                  <Input id="phone" placeholder="Ej: +52 55 1234 5678" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" defaultValue={business.email} type="email" />
+                  <Input id="email" type="email" placeholder="Ej: hola@minegocio.com" />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="address">Dirección</Label>
-                <Input id="address" defaultValue={business.address} />
+                <Input id="address" placeholder="Ej: Av. Principal 123" />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="city">Ciudad</Label>
-                  <Input id="city" defaultValue={business.city} />
+                  <Input id="city" placeholder="Ej: Ciudad de México" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="country">País</Label>
-                  <Input id="country" defaultValue={business.country} />
+                  <Input id="country" placeholder="Ej: México" />
                 </div>
               </div>
               <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
@@ -92,21 +90,21 @@ export default function SettingsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="website">Sitio Web</Label>
-                  <Input id="website" defaultValue={business.website} />
+                  <Input id="website" placeholder="Ej: https://minegocio.com" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="instagram">Instagram</Label>
-                  <Input id="instagram" defaultValue={business.instagram} />
+                  <Input id="instagram" placeholder="Ej: @minegocio" />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="facebook">Facebook</Label>
-                  <Input id="facebook" defaultValue={business.facebook} />
+                  <Input id="facebook" placeholder="Ej: minegocio" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="whatsapp">WhatsApp</Label>
-                  <Input id="whatsapp" defaultValue={business.whatsapp} />
+                  <Input id="whatsapp" placeholder="Ej: +525512345678" />
                 </div>
               </div>
               <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
@@ -128,19 +126,19 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-3">
                   <input
                     type="color"
-                    defaultValue={business.primaryColor}
+                    defaultValue="#10b981"
                     className="h-10 w-10 rounded-lg border border-border cursor-pointer"
                   />
-                  <Input defaultValue={business.primaryColor} className="w-32" />
+                  <Input defaultValue="#10b981" className="w-32" />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Logo del Negocio</Label>
                 <div className="flex items-center gap-4">
                   <div className="h-20 w-20 rounded-xl bg-muted flex items-center justify-center">
-                    <span className="text-2xl font-bold text-muted-foreground">CA</span>
+                    <span className="text-2xl font-bold text-muted-foreground">?</span>
                   </div>
-                  <Button variant="outline">Cambiar Logo</Button>
+                  <Button variant="outline">Subir Logo</Button>
                 </div>
               </div>
               <Button className="bg-primary text-primary-foreground hover:bg-primary/90">

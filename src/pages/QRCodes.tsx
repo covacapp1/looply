@@ -1,6 +1,6 @@
+import { QrCode } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { QRGenerator } from "@/components/qr/QRGenerator";
-import { mockQRCodes, mockBusiness } from "@/services/mock";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 export default function QRCodesPage() {
   return (
@@ -13,25 +13,13 @@ export default function QRCodesPage() {
           { label: "QR Inteligentes" },
         ]}
       />
-
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {mockQRCodes.map((qr) => (
-          <QRGenerator
-            key={qr.id}
-            url={qr.url}
-            title={
-              qr.type === "loyalty"
-                ? "Fidelización"
-                : qr.type === "menu"
-                ? "Menú"
-                : qr.type === "promotions"
-                ? "Promociones"
-                : "Página Pública"
-            }
-            description={`${qr.scans} escaneos`}
-          />
-        ))}
-      </div>
+      <EmptyState
+        icon={QrCode}
+        title="No hay QR configurados"
+        description="Configura tu programa de fidelización y menú para generar códigos QR automáticamente."
+        actionLabel="Ir a Fidelización"
+        onAction={() => window.location.href = "/loyalty"}
+      />
     </div>
   );
 }

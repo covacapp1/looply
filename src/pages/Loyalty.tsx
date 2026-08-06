@@ -151,15 +151,15 @@ export default function LoyaltyPage() {
         <TabsContent value="preview" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <LoyaltyCard
-              businessName={program.name}
-              customerName="María García"
-              points={2350}
-              tier={program.tiers[2]}
+              businessName={program.name || "Tu Negocio"}
+              customerName="Nombre del Cliente"
+              points={0}
+              tier={program.tiers[0]}
             />
             <StampCard
-              totalStamps={program.stampsRequired}
-              completedStamps={7}
-              reward={program.stampReward}
+              totalStamps={program.stampsRequired || 10}
+              completedStamps={0}
+              reward={program.stampReward || "Recompensa"}
             />
           </div>
         </TabsContent>

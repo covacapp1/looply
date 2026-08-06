@@ -16,8 +16,8 @@ export default function BirthdayPage() {
       <EmptyState
         icon={Cake}
         title="Promociones de Cumpleaños"
-        description="Configura promociones automáticas para los cumpleaños de tus clientes. Ofrece descuentos, puntos dobles o regalos especiales."
-        actionLabel="Crear Promoción de Cumpleaños"
+        description="Configura promociones automáticas para los cumpleaños de tus clientes."
+        actionLabel="Crear Promoción"
         onAction={() => {}}
       />
     </div>

@@ -1,6 +1,5 @@
 import { PageHeader } from "@/components/shared/PageHeader";
 import { QRGenerator } from "@/components/qr/QRGenerator";
-import { mockBusiness } from "@/services/mock";
 
 export default function MenuQRPage() {
   return (
@@ -16,7 +15,7 @@ export default function MenuQRPage() {
       />
       <div className="max-w-md mx-auto">
         <QRGenerator
-          url={`https://looply.app/menu/${mockBusiness.slug}`}
+          url="https://looply.app/menu/tu-negocio"
           title="QR del Menú"
           description="Escanea para ver el menú"
         />

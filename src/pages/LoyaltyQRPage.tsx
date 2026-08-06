@@ -1,6 +1,5 @@
 import { PageHeader } from "@/components/shared/PageHeader";
 import { QRGenerator } from "@/components/qr/QRGenerator";
-import { mockBusiness } from "@/services/mock";
 
 export default function LoyaltyQRPage() {
   return (
@@ -16,7 +15,7 @@ export default function LoyaltyQRPage() {
       />
       <div className="max-w-md mx-auto">
         <QRGenerator
-          url={`https://looply.app/join/${mockBusiness.slug}`}
+          url="https://looply.app/join/tu-negocio"
           title="QR de Fidelización"
           description="Escanea para unirte al programa"
         />

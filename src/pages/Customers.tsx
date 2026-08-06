@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Plus, Filter } from "lucide-react";
+import { Plus, Filter, Contact } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SearchBar } from "@/components/shared/SearchBar";
 import { CustomerCard } from "@/components/customers/CustomerCard";
@@ -11,7 +10,6 @@ import { mockCustomers } from "@/services/mock";
 export default function CustomersPage() {
   const customers = mockCustomers;
   const [search, setSearch] = useState("");
-  const [view, setView] = useState<"grid" | "list">("grid");
 
   const filteredCustomers = customers.filter(
     (c) =>
@@ -37,29 +35,39 @@ export default function CustomersPage() {
         ]}
       />
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
-        <SearchBar value={search} onChange={setSearch} placeholder="Buscar por nombre, email o teléfono..." />
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filtros
-          </Button>
-        </div>
-      </div>
+      {customers.length > 0 ? (
+        <>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+            <SearchBar value={search} onChange={setSearch} placeholder="Buscar por nombre, email o teléfono..." />
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Filtros
+              </Button>
+            </div>
+          </div>
 
-      {filteredCustomers.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredCustomers.map((customer) => (
-            <CustomerCard key={customer.id} customer={customer} />
-          ))}
-        </div>
+          {filteredCustomers.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredCustomers.map((customer) => (
+                <CustomerCard key={customer.id} customer={customer} />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={Filter}
+              title="No se encontraron clientes"
+              description="Intenta con otros términos de búsqueda"
+            />
+          )}
+        </>
       ) : (
         <EmptyState
-          icon={Filter}
-          title="No se encontraron clientes"
-          description="Intenta con otros términos de búsqueda o agrega un nuevo cliente"
-          actionLabel="Agregar Cliente"
-          onAction={() => {}}
+          icon={Contact}
+          title="No hay clientes"
+          description="Los clientes aparecerán aquí cuando se registren en tu programa de fidelización"
+          actionLabel="Ver QR de Fidelización"
+          onAction={() => window.location.href = "/loyalty/qr"}
         />
       )}
     </div>

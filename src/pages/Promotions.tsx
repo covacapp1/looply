@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,75 +38,85 @@ export default function PromotionsPage() {
         ]}
       />
 
-      <div className="flex items-center gap-4 mb-6">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar promociones..."
-            className="pl-10 bg-muted/50 border-border"
-          />
-        </div>
-      </div>
-
-      <Tabs defaultValue="all" className="space-y-6">
-        <TabsList className="bg-muted">
-          <TabsTrigger value="all">Todas ({filteredPromotions.length})</TabsTrigger>
-          <TabsTrigger value="active">Activas ({activePromotions.length})</TabsTrigger>
-          <TabsTrigger value="inactive">Inactivas ({inactivePromotions.length})</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all" className="space-y-6">
-          {filteredPromotions.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredPromotions.map((promo) => (
-                <PromotionCard key={promo.id} promotion={promo} />
-              ))}
+      {promotions.length > 0 ? (
+        <>
+          <div className="flex items-center gap-4 mb-6">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar promociones..."
+                className="pl-10 bg-muted/50 border-border"
+              />
             </div>
-          ) : (
-            <EmptyState
-              icon={Plus}
-              title="No hay promociones"
-              description="Crea tu primera promoción para atraer más clientes"
-              actionLabel="Crear Promoción"
-              onAction={() => {}}
-            />
-          )}
-        </TabsContent>
+          </div>
 
-        <TabsContent value="active" className="space-y-6">
-          {activePromotions.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {activePromotions.map((promo) => (
-                <PromotionCard key={promo.id} promotion={promo} />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon={Plus}
-              title="No hay promociones activas"
-              description="Activa una promoción existente o crea una nueva"
-            />
-          )}
-        </TabsContent>
+          <Tabs defaultValue="all" className="space-y-6">
+            <TabsList className="bg-muted">
+              <TabsTrigger value="all">Todas ({filteredPromotions.length})</TabsTrigger>
+              <TabsTrigger value="active">Activas ({activePromotions.length})</TabsTrigger>
+              <TabsTrigger value="inactive">Inactivas ({inactivePromotions.length})</TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="inactive" className="space-y-6">
-          {inactivePromotions.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {inactivePromotions.map((promo) => (
-                <PromotionCard key={promo.id} promotion={promo} />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon={Plus}
-              title="No hay promociones inactivas"
-              description="Todas tus promociones están activas"
-            />
-          )}
-        </TabsContent>
-      </Tabs>
+            <TabsContent value="all" className="space-y-6">
+              {filteredPromotions.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {filteredPromotions.map((promo) => (
+                    <PromotionCard key={promo.id} promotion={promo} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={Search}
+                  title="No se encontraron promociones"
+                  description="Intenta con otros términos de búsqueda"
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="active" className="space-y-6">
+              {activePromotions.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {activePromotions.map((promo) => (
+                    <PromotionCard key={promo.id} promotion={promo} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={Tag}
+                  title="No hay promociones activas"
+                  description="Activa una promoción existente o crea una nueva"
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="inactive" className="space-y-6">
+              {inactivePromotions.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {inactivePromotions.map((promo) => (
+                    <PromotionCard key={promo.id} promotion={promo} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={Tag}
+                  title="No hay promociones inactivas"
+                  description="Todas tus promociones están activas"
+                />
+              )}
+            </TabsContent>
+          </Tabs>
+        </>
+      ) : (
+        <EmptyState
+          icon={Tag}
+          title="No hay promociones"
+          description="Crea tu primera promoción para atraer más clientes"
+          actionLabel="Crear Promoción"
+          onAction={() => {}}
+        />
+      )}
     </div>
   );
 }

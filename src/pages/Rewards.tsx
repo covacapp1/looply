@@ -15,8 +15,8 @@ export default function RewardsPage() {
       />
       <EmptyState
         icon={Gift}
-        title="Recompensas"
-        description="Crea recompensas que tus clientes puedan canjear con sus puntos. Controla el stock, costos y fechas de vencimiento."
+        title="No hay recompensas"
+        description="Crea recompensas que tus clientes puedan canjear con sus puntos."
         actionLabel="Crear Recompensa"
         onAction={() => {}}
       />

@@ -15,8 +15,8 @@ export default function ReferralsPage() {
       />
       <EmptyState
         icon={Users}
-        title="Programa de Referidos"
-        description="Invita a tus clientes a referir amigos. Cada cliente obtiene un código único y el comercio decide la recompensa."
+        title="No hay referidos"
+        description="Invita a tus clientes a referir amigos y obtén beneficios mutuos."
         actionLabel="Configurar Referidos"
         onAction={() => {}}
       />
