@@ -3,11 +3,11 @@ import { LayoutDashboard, Heart, Users, BarChart3, Settings } from "lucide-react
 import { cn } from "@/lib/utils";
 
 const mobileNavItems = [
-  { label: "Inicio", href: "/", icon: LayoutDashboard, color: "bg-blue-500" },
-  { label: "Fidelización", href: "/loyalty", icon: Heart, color: "bg-rose-500" },
-  { label: "Clientes", href: "/customers", icon: Users, color: "bg-sky-500" },
-  { label: "Estadísticas", href: "/statistics", icon: BarChart3, color: "bg-lime-500" },
-  { label: "Ajustes", href: "/settings", icon: Settings, color: "bg-gray-500" },
+  { label: "Inicio", href: "/", icon: LayoutDashboard },
+  { label: "Fidelización", href: "/loyalty", icon: Heart },
+  { label: "Clientes", href: "/customers", icon: Users },
+  { label: "Estadísticas", href: "/statistics", icon: BarChart3 },
+  { label: "Ajustes", href: "/settings", icon: Settings },
 ];
 
 export function MobileNav() {
@@ -23,23 +23,14 @@ export function MobileNav() {
               key={item.href}
               to={item.href}
               className={cn(
-                "flex flex-col items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all duration-200 min-w-[60px]",
+                "flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-colors min-w-[56px]",
                 isActive
                   ? "text-primary"
                   : "text-muted-foreground"
               )}
             >
-              <div
-                className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-muted"
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-              </div>
-              <span className="text-[10px] font-semibold">{item.label}</span>
+              <item.icon className="h-5 w-5" />
+              <span className="text-[10px] font-medium">{item.label}</span>
             </Link>
           );
         })}
