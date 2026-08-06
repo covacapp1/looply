@@ -43,24 +43,23 @@ export default function DashboardPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] flex flex-col">
       {/* Logo */}
-      <div className="flex justify-center pt-8 pb-6">
+      <div className="flex justify-center pt-4 pb-3">
         <motion.div
           className="flex flex-col items-center"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="h-20 w-20 rounded-2xl bg-primary flex items-center justify-center shadow-lg mb-3">
-            <span className="text-4xl font-bold text-primary-foreground">L</span>
+          <div className="h-14 w-14 rounded-xl bg-primary flex items-center justify-center shadow-lg mb-2">
+            <span className="text-2xl font-bold text-primary-foreground">L</span>
           </div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">LOOPLY</h1>
-          <p className="text-sm text-muted-foreground">Fidelización Inteligente</p>
+          <h1 className="text-lg font-bold text-foreground tracking-tight">LOOPLY</h1>
         </motion.div>
       </div>
 
       {/* Grid de botones */}
-      <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-8">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 max-w-5xl mx-auto">
+      <div className="flex-1 px-3 sm:px-6 lg:px-8 pb-4">
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 max-w-6xl mx-auto">
           {menuItems.map((item, index) => {
             const Icon = item.icon;
             return (
@@ -68,24 +67,24 @@ export default function DashboardPage() {
                 key={item.href}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.03 }}
+                transition={{ delay: index * 0.02 }}
               >
                 <Link
                   to={item.href}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-3 p-6 sm:p-8",
-                    "rounded-2xl border border-border bg-card",
-                    "hover:shadow-lg hover:border-primary/30 hover:bg-primary/5",
+                    "flex flex-col items-center justify-center gap-2 p-3 sm:p-4",
+                    "rounded-xl border border-border bg-card",
+                    "hover:shadow-md hover:border-primary/30 hover:bg-primary/5",
                     "transition-all duration-200 group"
                   )}
                 >
                   <div className={cn(
-                    "flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl",
+                    "flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl",
                     "bg-muted group-hover:bg-primary/10 transition-colors duration-200"
                   )}>
-                    <Icon className={cn("h-7 w-7 sm:h-8 sm:w-8", item.color)} />
+                    <Icon className={cn("h-5 w-5 sm:h-6 sm:w-6", item.color)} />
                   </div>
-                  <span className="text-sm sm:text-base font-medium text-foreground text-center leading-tight">
+                  <span className="text-xs sm:text-sm font-medium text-foreground text-center leading-tight">
                     {item.label}
                   </span>
                 </Link>
