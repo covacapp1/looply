@@ -11,9 +11,6 @@ export const TIERS = [
 export const LOYALTY_TYPES = [
   { id: "points", name: "Puntos", icon: "Coins", description: "Acumula puntos por cada compra" },
   { id: "stamps", name: "Sellos", icon: "Stamp", description: "Completa sellos para obtener premios" },
-  { id: "visits", name: "Visitas", icon: "Footprints", description: "Acumula visitas para beneficios" },
-  { id: "cashback", name: "Cashback", icon: "Wallet", description: "Dinero de vuelta en cada compra" },
-  { id: "custom", name: "Personalizado", icon: "Settings", description: "Diseña tu propio programa" },
 ] as const;
 
 export const DAYS_OF_WEEK = [

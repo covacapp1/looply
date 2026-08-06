@@ -80,7 +80,7 @@ export default function LoyaltyPage() {
               <CardTitle>Seleccionar Tipo de Programa</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 {LOYALTY_TYPES.map((type) => (
                   <motion.button
                     key={type.id}
@@ -94,7 +94,7 @@ export default function LoyaltyPage() {
                     whileTap={{ scale: 0.98 }}
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <span className="text-lg">{type.icon === "Coins" ? "💰" : type.icon === "Stamp" ? "🎫" : type.icon === "Footprints" ? "👣" : type.icon === "Wallet" ? "💳" : "⚙️"}</span>
+                      <span className="text-lg">{type.id === "points" ? "💰" : "🎫"}</span>
                     </div>
                     <div>
                       <p className="font-medium text-foreground">{type.name}</p>
