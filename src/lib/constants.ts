@@ -28,8 +28,6 @@ export const NAV_ITEMS = [
   { label: "Tarjetas de Fidelidad", href: "/loyalty", icon: "Heart" },
   { label: "Menú Digital", href: "/menu", icon: "UtensilsCrossed" },
   { label: "Carta de Precios", href: "/menu/pricing", icon: "DollarSign" },
-  { label: "Promociones", href: "/promotions", icon: "Tag" },
-  { label: "Recompensas", href: "/rewards", icon: "Gift" },
   { label: "Clientes", href: "/customers", icon: "Contact" },
   { label: "Reportes", href: "/statistics", icon: "BarChart3" },
   { label: "Configuración", href: "/settings", icon: "Settings" },

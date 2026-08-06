@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,30 +18,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QRGenerator } from "@/components/qr/QRGenerator";
 import { StampCardVisual } from "@/components/loyalty/StampCardVisual";
+import {
+  getRewards,
+  getRewardById,
+  getCustomersByReward,
+  createReward,
+  createCustomer,
+  addStamp,
+  getBusinessStats,
+} from "@/services/supabase";
 import type { LoyaltyReward, Customer, StampHistory } from "@/types";
 import {
   Plus,
   Gift,
   Users,
   QrCode,
-  Search,
   Check,
   MessageCircle,
-  Phone,
   User,
   Star,
-  Trash2,
-  Eye,
-  EyeOff,
+  Loader2,
 } from "lucide-react";
 
 export default function LoyaltyPage() {
   const [rewards, setRewards] = useState<LoyaltyReward[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [stampHistory, setStampHistory] = useState<StampHistory[]>([]);
+  const [customers, setCustomers] = useState<Record<string, Customer[]>>({});
+  const [stats, setStats] = useState({ totalRewards: 0, totalCustomers: 0, totalStamps: 0, completedCards: 0 });
+  const [loading, setLoading] = useState(true);
 
   const [showCreateReward, setShowCreateReward] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
@@ -49,7 +54,7 @@ export default function LoyaltyPage() {
   const [showStampDialog, setShowStampDialog] = useState(false);
   const [selectedReward, setSelectedReward] = useState<LoyaltyReward | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [lastMessage, setLastMessage] = useState("");
 
   const [newReward, setNewReward] = useState({
     name: "",
@@ -66,91 +71,82 @@ export default function LoyaltyPage() {
     loyaltyRewardId: "",
   });
 
-  const handleCreateReward = () => {
-    const reward: LoyaltyReward = {
-      id: Date.now().toString(),
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    setLoading(true);
+    const [rewardsData, statsData] = await Promise.all([
+      getRewards(),
+      getBusinessStats(),
+    ]);
+
+    setRewards(rewardsData);
+    setStats(statsData);
+
+    // Load customers for each reward
+    const customersMap: Record<string, Customer[]> = {};
+    for (const reward of rewardsData) {
+      customersMap[reward.id] = await getCustomersByReward(reward.id);
+    }
+    setCustomers(customersMap);
+    setLoading(false);
+  }
+
+  async function handleCreateReward() {
+    const reward = await createReward({
       businessId: "1",
-      ...newReward,
+      name: newReward.name,
+      description: newReward.description,
+      stampsRequired: newReward.stampsRequired,
+      stampAction: newReward.stampAction,
       isActive: true,
-      createdAt: new Date(),
-    };
-    setRewards([...rewards, reward]);
-    setShowCreateReward(false);
-    setNewReward({ name: "", description: "", stampsRequired: 6, stampAction: "" });
-  };
+    });
 
-  const handleAddCustomer = () => {
-    const reward = rewards.find((r) => r.id === newCustomer.loyaltyRewardId);
-    if (!reward) return;
+    if (reward) {
+      setShowCreateReward(false);
+      setNewReward({ name: "", description: "", stampsRequired: 6, stampAction: "" });
+      loadData();
+    }
+  }
 
-    const customer: Customer = {
-      id: Date.now().toString(),
-      businessId: "1",
+  async function handleAddCustomer() {
+    const customer = await createCustomer({
       loyaltyRewardId: newCustomer.loyaltyRewardId,
       firstName: newCustomer.firstName,
       lastName: newCustomer.lastName,
       phone: newCustomer.phone,
       countryCode: newCustomer.countryCode,
-      stamps: 0,
-      isCompleted: false,
-      completedAt: null,
-      createdAt: new Date(),
-    };
-    setCustomers([...customers, customer]);
-    setShowAddCustomer(false);
-    setNewCustomer({ firstName: "", lastName: "", phone: "", countryCode: "+54", loyaltyRewardId: "" });
-  };
+    });
 
-  const handleAddStamp = (customer: Customer) => {
-    const reward = rewards.find((r) => r.id === customer.loyaltyRewardId);
-    if (!reward) return;
+    if (customer) {
+      setShowAddCustomer(false);
+      setNewCustomer({ firstName: "", lastName: "", phone: "", countryCode: "+54", loyaltyRewardId: "" });
+      loadData();
+    }
+  }
 
-    const newStamps = customer.stamps + 1;
-    const isCompleted = newStamps >= reward.stampsRequired;
+  async function handleAddStamp(customer: Customer) {
+    const result = await addStamp(customer.id);
 
-    const updatedCustomer: Customer = {
-      ...customer,
-      stamps: newStamps,
-      isCompleted,
-      completedAt: isCompleted ? new Date() : null,
-    };
+    if (result.customer) {
+      setSelectedCustomer(result.customer);
+      if (result.history) {
+        setLastMessage(result.history.message);
+      }
+      setShowStampDialog(true);
+      loadData();
+    }
+  }
 
-    setCustomers(customers.map((c) => (c.id === customer.id ? updatedCustomer : c)));
-    setSelectedCustomer(updatedCustomer);
-
-    const history: StampHistory = {
-      id: Date.now().toString(),
-      customerId: customer.id,
-      loyaltyRewardId: reward.id,
-      stampsAdded: 1,
-      totalStamps: newStamps,
-      message: isCompleted
-        ? `🎉 ¡Felicitaciones! Ya puedes canjear tu premio: ${reward.name}`
-        : `Gracias por elegir ${reward.name}. Tu tarjeta tiene ${newStamps} de ${reward.stampsRequired} sellos`,
-      timestamp: new Date(),
-      sent: true,
-    };
-    setStampHistory([history, ...stampHistory]);
-    setShowStampDialog(true);
-  };
-
-  const getRewardCustomers = (rewardId: string) =>
-    customers.filter((c) => c.loyaltyRewardId === rewardId);
-
-  const getRewardStats = (rewardId: string) => {
-    const rewardCustomers = getRewardCustomers(rewardId);
-    const total = rewardCustomers.length;
-    const completed = rewardCustomers.filter((c) => c.isCompleted).length;
-    return { total, completed };
-  };
-
-  const filteredCustomers = customers.filter(
-    (c) =>
-      `${c.firstName} ${c.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone.includes(searchQuery)
-  );
-
-  const selectedRewardForCustomer = rewards.find((r) => r.id === newCustomer.loyaltyRewardId);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -173,7 +169,7 @@ export default function LoyaltyPage() {
               <Gift className="h-4 w-4 text-primary" />
               <div>
                 <p className="text-xs text-muted-foreground">Premios</p>
-                <p className="text-lg font-bold">{rewards.length}</p>
+                <p className="text-lg font-bold">{stats.totalRewards}</p>
               </div>
             </div>
           </CardContent>
@@ -184,7 +180,7 @@ export default function LoyaltyPage() {
               <Users className="h-4 w-4 text-blue-500" />
               <div>
                 <p className="text-xs text-muted-foreground">Clientes</p>
-                <p className="text-lg font-bold">{customers.length}</p>
+                <p className="text-lg font-bold">{stats.totalCustomers}</p>
               </div>
             </div>
           </CardContent>
@@ -195,7 +191,7 @@ export default function LoyaltyPage() {
               <Star className="h-4 w-4 text-amber-500" />
               <div>
                 <p className="text-xs text-muted-foreground">Sellos dados</p>
-                <p className="text-lg font-bold">{customers.reduce((acc, c) => acc + c.stamps, 0)}</p>
+                <p className="text-lg font-bold">{stats.totalStamps}</p>
               </div>
             </div>
           </CardContent>
@@ -206,7 +202,7 @@ export default function LoyaltyPage() {
               <Check className="h-4 w-4 text-emerald-500" />
               <div>
                 <p className="text-xs text-muted-foreground">Canjeados</p>
-                <p className="text-lg font-bold">{customers.filter((c) => c.isCompleted).length}</p>
+                <p className="text-lg font-bold">{stats.completedCards}</p>
               </div>
             </div>
           </CardContent>
@@ -231,8 +227,8 @@ export default function LoyaltyPage() {
       ) : (
         <div className="space-y-4">
           {rewards.map((reward) => {
-            const stats = getRewardStats(reward.id);
-            const rewardCustomers = getRewardCustomers(reward.id);
+            const rewardCustomers = customers[reward.id] || [];
+            const completedCount = rewardCustomers.filter((c) => c.isCompleted).length;
 
             return (
               <Card key={reward.id}>
@@ -245,19 +241,17 @@ export default function LoyaltyPage() {
                       </CardTitle>
                       <p className="text-sm text-muted-foreground mt-1">{reward.description}</p>
                     </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => {
-                          setSelectedReward(reward);
-                          setShowQRDialog(true);
-                        }}
-                      >
-                        <QrCode className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => {
+                        setSelectedReward(reward);
+                        setShowQRDialog(true);
+                      }}
+                    >
+                      <QrCode className="h-4 w-4" />
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -272,8 +266,8 @@ export default function LoyaltyPage() {
                     </div>
                   </div>
                   <div className="flex gap-4 text-sm">
-                    <Badge variant="outline">{stats.total} clientes</Badge>
-                    <Badge variant="outline" className="text-emerald-600">{stats.completed} canjeados</Badge>
+                    <Badge variant="outline">{rewardCustomers.length} clientes</Badge>
+                    <Badge variant="outline" className="text-emerald-600">{completedCount} canjeados</Badge>
                   </div>
 
                   {/* Customers for this reward */}
@@ -311,7 +305,6 @@ export default function LoyaltyPage() {
                                   size="sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setSelectedCustomer(customer);
                                     handleAddStamp(customer);
                                   }}
                                 >
@@ -482,7 +475,7 @@ export default function LoyaltyPage() {
           </DialogHeader>
           <div className="flex justify-center py-4">
             <QRGenerator
-              url={`https://looply.app/reward/${selectedReward?.id}`}
+              url={`${window.location.origin}/reward/${selectedReward?.id}`}
               title={selectedReward?.name || ""}
               description="Escaneá para sumar sellos"
             />
@@ -511,9 +504,7 @@ export default function LoyaltyPage() {
             </div>
             <div className="p-3 rounded-lg bg-muted/50">
               <p className="text-xs text-muted-foreground">Mensaje enviado:</p>
-              <p className="text-sm font-medium mt-1">
-                {stampHistory[0]?.message}
-              </p>
+              <p className="text-sm font-medium mt-1">{lastMessage}</p>
             </div>
             <Button onClick={() => setShowStampDialog(false)} className="w-full">
               Cerrar
