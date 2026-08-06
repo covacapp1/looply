@@ -32,11 +32,11 @@ export default function StatisticsPage() {
   return (
     <div>
       <PageHeader
-        title="Estadísticas"
+        title="Reportes"
         description="Análisis detallado del rendimiento de tu negocio"
         breadcrumbs={[
           { label: "Dashboard", href: "/" },
-          { label: "Estadísticas" },
+          { label: "Reportes" },
         ]}
       />
 

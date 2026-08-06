@@ -15,7 +15,7 @@ const navItems = [
   { label: "Promociones", href: "/promotions" },
   { label: "Recompensas", href: "/rewards" },
   { label: "Clientes", href: "/customers" },
-  { label: "Estadísticas", href: "/statistics" },
+  { label: "Reportes", href: "/statistics" },
   { label: "Configuración", href: "/settings" },
 ];
 

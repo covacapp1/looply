@@ -23,7 +23,7 @@ const menuItems = [
   { label: "Promociones", href: "/promotions", icon: Tag, color: "text-orange-500" },
   { label: "Recompensas", href: "/rewards", icon: Gift, color: "text-purple-500" },
   { label: "Clientes", href: "/customers", icon: Contact, color: "text-sky-500" },
-  { label: "Estadísticas", href: "/statistics", icon: BarChart3, color: "text-lime-500" },
+  { label: "Reportes", href: "/statistics", icon: BarChart3, color: "text-lime-500" },
   { label: "Configuración", href: "/settings", icon: Settings, color: "text-gray-500" },
 ];
 
