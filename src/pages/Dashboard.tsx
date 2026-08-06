@@ -5,37 +5,25 @@ import {
   CreditCard,
   ScanLine,
   UtensilsCrossed,
-  QrCode,
   DollarSign,
   Tag,
-  Cake,
   Gift,
-  Users,
   Contact,
   BarChart3,
-  Smartphone,
-  FileUp,
   Settings,
-  LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard, color: "text-blue-500" },
   { label: "Fidelización", href: "/loyalty", icon: Heart, color: "text-rose-500" },
   { label: "Tarjeta Digital", href: "/loyalty/card", icon: CreditCard, color: "text-violet-500" },
   { label: "QR Fidelización", href: "/loyalty/qr", icon: ScanLine, color: "text-cyan-500" },
   { label: "Menú Digital", href: "/menu", icon: UtensilsCrossed, color: "text-amber-500" },
-  { label: "QR Menú", href: "/menu/qr", icon: QrCode, color: "text-teal-500" },
   { label: "Carta de Precios", href: "/menu/pricing", icon: DollarSign, color: "text-emerald-500" },
   { label: "Promociones", href: "/promotions", icon: Tag, color: "text-orange-500" },
-  { label: "Cumpleaños", href: "/birthday", icon: Cake, color: "text-pink-500" },
   { label: "Recompensas", href: "/rewards", icon: Gift, color: "text-purple-500" },
-  { label: "Referidos", href: "/referrals", icon: Users, color: "text-indigo-500" },
   { label: "Clientes", href: "/customers", icon: Contact, color: "text-sky-500" },
   { label: "Estadísticas", href: "/statistics", icon: BarChart3, color: "text-lime-500" },
-  { label: "QR Inteligentes", href: "/qr-codes", icon: Smartphone, color: "text-fuchsia-500" },
-  { label: "Importar/Exportar", href: "/import-export", icon: FileUp, color: "text-slate-500" },
   { label: "Configuración", href: "/settings", icon: Settings, color: "text-gray-500" },
 ];
 

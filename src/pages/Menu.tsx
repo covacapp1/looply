@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { MenuGrid } from "@/components/menu/MenuGrid";
+import { QRGenerator } from "@/components/qr/QRGenerator";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { mockMenuCategories } from "@/services/mock";
+import { mockMenuCategories, mockBusiness } from "@/services/mock";
 
 export default function MenuPage() {
   const categories = mockMenuCategories;
@@ -45,6 +46,7 @@ export default function MenuPage() {
           <TabsTrigger value="menu">Menú</TabsTrigger>
           <TabsTrigger value="categories">Categorías</TabsTrigger>
           <TabsTrigger value="pricing">Carta de Precios</TabsTrigger>
+          <TabsTrigger value="qr">QR Menú</TabsTrigger>
         </TabsList>
 
         <TabsContent value="menu" className="space-y-6">
@@ -116,6 +118,16 @@ export default function MenuPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="qr">
+          <div className="max-w-md mx-auto">
+            <QRGenerator
+              url={`https://looply.app/menu/${mockBusiness.slug}`}
+              title="QR del Menú"
+              description="Escanea para ver el menú"
+            />
           </div>
         </TabsContent>
       </Tabs>

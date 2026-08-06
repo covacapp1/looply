@@ -11,16 +11,11 @@ const navItems = [
   { label: "Tarjeta Digital", href: "/loyalty/card" },
   { label: "QR Fidelización", href: "/loyalty/qr" },
   { label: "Menú Digital", href: "/menu" },
-  { label: "QR Menú", href: "/menu/qr" },
   { label: "Carta de Precios", href: "/menu/pricing" },
   { label: "Promociones", href: "/promotions" },
-  { label: "Cumpleaños", href: "/birthday" },
   { label: "Recompensas", href: "/rewards" },
-  { label: "Referidos", href: "/referrals" },
   { label: "Clientes", href: "/customers" },
   { label: "Estadísticas", href: "/statistics" },
-  { label: "QR Inteligentes", href: "/qr-codes" },
-  { label: "Importar/Exportar", href: "/import-export" },
   { label: "Configuración", href: "/settings" },
 ];
 
