@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const navItems = [
-  { label: "Dashboard", href: "/" },
+  { label: "Menú", href: "/" },
   { label: "Fidelización", href: "/loyalty" },
   { label: "Tarjeta Digital", href: "/loyalty/card" },
   { label: "QR Fidelización", href: "/loyalty/qr" },
