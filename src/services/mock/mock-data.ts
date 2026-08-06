@@ -1,7 +1,7 @@
-import type { Business, DashboardMetrics, Customer, LoyaltyProgram, MenuCategory, Promotion, QRCode } from "@/types";
+import type { Business, Customer, StampProgram, StampHistory, Activity, MenuCategory, Promotion } from "@/types";
 
 export const mockBusiness: Business = {
-  id: "",
+  id: "1",
   name: "",
   slug: "",
   logo: "",
@@ -23,44 +23,34 @@ export const mockBusiness: Business = {
   updatedAt: new Date(),
 };
 
-export const mockDashboardMetrics: DashboardMetrics = {
-  totalCustomers: 0,
-  activeCustomers: 0,
-  newCustomers: 0,
-  totalRedemptions: 0,
-  pointsIssued: 0,
-  stampsCompleted: 0,
-  totalVisits: 0,
-  menuViews: 0,
-  qrScans: 0,
-  recentActivity: [],
-  weeklyVisits: [],
-  customerGrowth: [],
+export const mockStampProgram: StampProgram = {
+  id: "",
+  businessId: "",
+  rewardName: "",
+  rewardDescription: "",
+  stampsRequired: 6,
+  stampAction: "",
+  isActive: false,
+  createdAt: new Date(),
 };
 
 export const mockCustomers: Customer[] = [];
 
-export const mockLoyaltyProgram: LoyaltyProgram = {
-  id: "",
-  businessId: "",
-  type: "points",
-  name: "",
-  description: "",
-  pointsPerDollar: 0,
-  stampsRequired: 0,
-  stampReward: "",
-  tiers: [
-    { id: "bronze", name: "Bronce", minPoints: 0, benefits: [], color: "#CD7F32" },
-    { id: "silver", name: "Plata", minPoints: 1000, benefits: [], color: "#C0C0C0" },
-    { id: "gold", name: "Oro", minPoints: 5000, benefits: [], color: "#FFD700" },
-    { id: "platinum", name: "Platino", minPoints: 15000, benefits: [], color: "#E5E4E2" },
-  ],
-  isActive: false,
-  createdAt: new Date(),
+export const mockStampHistory: StampHistory[] = [];
+
+export const mockDashboardMetrics = {
+  totalCustomers: 0,
+  activeCustomers: 0,
+  totalStamps: 0,
+  completedCards: 0,
 };
+
+export const mockLoyaltyProgram = mockStampProgram;
 
 export const mockMenuCategories: MenuCategory[] = [];
 
 export const mockPromotions: Promotion[] = [];
 
-export const mockQRCodes: QRCode[] = [];
+export const mockQRCodes: any[] = [];
+
+export const mockActivities: Activity[] = [];

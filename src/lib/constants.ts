@@ -24,25 +24,15 @@ export const DAYS_OF_WEEK = [
 ] as const;
 
 export const NAV_ITEMS = [
-  { label: "Dashboard", href: "/", icon: "LayoutDashboard" },
-  { label: "Fidelización", href: "/loyalty", icon: "Heart", children: [
-    { label: "Programa", href: "/loyalty" },
-    { label: "Tarjeta Digital", href: "/loyalty/card" },
-    { label: "QR Fidelización", href: "/loyalty/qr" },
-  ]},
-  { label: "Menú Digital", href: "/menu", icon: "UtensilsCrossed", children: [
-    { label: "Menú", href: "/menu" },
-    { label: "QR Menú", href: "/menu/qr" },
-    { label: "Carta de Precios", href: "/menu/pricing" },
-  ]},
+  { label: "Menú", href: "/", icon: "LayoutDashboard" },
+  { label: "Configurar", href: "/loyalty", icon: "Settings" },
+  { label: "Agregar Sello", href: "/loyalty/add-stamp", icon: "PlusCircle" },
+  { label: "Menú Digital", href: "/menu", icon: "UtensilsCrossed" },
+  { label: "Carta de Precios", href: "/menu/pricing", icon: "DollarSign" },
   { label: "Promociones", href: "/promotions", icon: "Tag" },
-  { label: "Cumpleaños", href: "/birthday", icon: "Cake" },
   { label: "Recompensas", href: "/rewards", icon: "Gift" },
-  { label: "Referidos", href: "/referrals", icon: "Users" },
   { label: "Clientes", href: "/customers", icon: "Contact" },
-  { label: "Estadísticas", href: "/statistics", icon: "BarChart3" },
-  { label: "QR Inteligentes", href: "/qr-codes", icon: "QrCode" },
-  { label: "Importar/Exportar", href: "/import-export", icon: "FileUp" },
+  { label: "Reportes", href: "/statistics", icon: "BarChart3" },
   { label: "Configuración", href: "/settings", icon: "Settings" },
 ] as const;
 

@@ -11,13 +11,13 @@ import {
   Contact,
   BarChart3,
   Settings,
+  PlusCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
-  { label: "Fidelización", href: "/loyalty", icon: Heart, color: "text-rose-500" },
-  { label: "Tarjeta Digital", href: "/loyalty/card", icon: CreditCard, color: "text-violet-500" },
-  { label: "QR Fidelización", href: "/loyalty/qr", icon: ScanLine, color: "text-cyan-500" },
+  { label: "Configurar", href: "/loyalty", icon: Settings, color: "text-slate-500" },
+  { label: "Agregar Sello", href: "/loyalty/add-stamp", icon: PlusCircle, color: "text-emerald-500" },
   { label: "Menú Digital", href: "/menu", icon: UtensilsCrossed, color: "text-amber-500" },
   { label: "Carta de Precios", href: "/menu/pricing", icon: DollarSign, color: "text-emerald-500" },
   { label: "Promociones", href: "/promotions", icon: Tag, color: "text-orange-500" },

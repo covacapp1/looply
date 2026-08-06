@@ -1,13 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Heart, Users, BarChart3, Settings } from "lucide-react";
+import { LayoutDashboard, Settings, PlusCircle, Users, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const mobileNavItems = [
-  { label: "Inicio", href: "/", icon: LayoutDashboard },
-  { label: "Fidelización", href: "/loyalty", icon: Heart },
+  { label: "Menú", href: "/", icon: LayoutDashboard },
+  { label: "Configurar", href: "/loyalty", icon: Settings },
+  { label: "Agregar Sello", href: "/loyalty/add-stamp", icon: PlusCircle },
   { label: "Clientes", href: "/customers", icon: Users },
   { label: "Reportes", href: "/statistics", icon: BarChart3 },
-  { label: "Ajustes", href: "/settings", icon: Settings },
 ];
 
 export function MobileNav() {

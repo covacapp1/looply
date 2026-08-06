@@ -13,8 +13,7 @@ export default function CustomersPage() {
 
   const filteredCustomers = customers.filter(
     (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase()) ||
+      `${c.firstName} ${c.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
       c.phone.includes(search)
   );
 

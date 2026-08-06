@@ -1,10 +1,8 @@
 import { PageHeader } from "@/components/shared/PageHeader";
-import { LoyaltyCard } from "@/components/loyalty/LoyaltyCard";
-import { mockLoyaltyProgram } from "@/services/mock";
+import { StampCardVisual } from "@/components/loyalty/StampCardVisual";
+import { mockStampProgram } from "@/services/mock/mock-data";
 
 export default function DigitalCardPage() {
-  const tier = mockLoyaltyProgram.tiers[0];
-
   return (
     <div>
       <PageHeader
@@ -17,11 +15,15 @@ export default function DigitalCardPage() {
         ]}
       />
       <div className="max-w-md mx-auto">
-        <LoyaltyCard
-          businessName={mockLoyaltyProgram.name || "Tu Negocio"}
+        <StampCardVisual
+          businessName="Tu Negocio"
           customerName="Nombre del Cliente"
-          points={0}
-          tier={tier}
+          stampsRequired={mockStampProgram.stampsRequired || 6}
+          currentStamps={0}
+          rewardName={mockStampProgram.rewardName || "Tu Premio"}
+          rewardDescription={mockStampProgram.rewardDescription || "Completa los sellos para ganar"}
+          stampAction={mockStampProgram.stampAction || "Compra para ganar un sello"}
+          isCompleted={false}
         />
       </div>
     </div>

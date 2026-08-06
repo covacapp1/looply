@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import DashboardPage from "@/pages/Dashboard";
 import LoyaltyPage from "@/pages/Loyalty";
+import AddStampPage from "@/pages/AddStamp";
 import DigitalCardPage from "@/pages/DigitalCardPage";
 import LoyaltyQRPage from "@/pages/LoyaltyQRPage";
 import MenuPage from "@/pages/Menu";
@@ -27,6 +28,7 @@ export default function App() {
           <Route element={<AppLayout />}>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/loyalty" element={<LoyaltyPage />} />
+            <Route path="/loyalty/add-stamp" element={<AddStampPage />} />
             <Route path="/loyalty/card" element={<DigitalCardPage />} />
             <Route path="/loyalty/qr" element={<LoyaltyQRPage />} />
             <Route path="/menu" element={<MenuPage />} />

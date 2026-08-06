@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { TierBadge } from "@/components/loyalty/TierBadge";
+import { Badge } from "@/components/ui/badge";
 import type { Customer } from "@/types";
 
 interface CustomerCardProps {
@@ -11,11 +11,7 @@ interface CustomerCardProps {
 }
 
 export function CustomerCard({ customer, onClick }: CustomerCardProps) {
-  const initials = customer.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2);
+  const initials = `${customer.firstName?.[0] || ""}${customer.lastName?.[0] || ""}`.toUpperCase();
 
   return (
     <motion.div
@@ -28,31 +24,33 @@ export function CustomerCard({ customer, onClick }: CustomerCardProps) {
       <div className="flex items-start gap-3">
         <Avatar className="h-12 w-12">
           <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-            {initials}
+            {initials || "?"}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h4 className="font-medium text-foreground truncate">{customer.name}</h4>
-            <TierBadge tier={customer.tier} />
+            <h4 className="font-medium text-foreground truncate">
+              {customer.firstName} {customer.lastName}
+            </h4>
+            <Badge variant={customer.isCompleted ? "default" : "secondary"} className="text-xs">
+              {customer.isCompleted ? "Completado" : "Activo"}
+            </Badge>
           </div>
-          <p className="text-sm text-muted-foreground truncate">{customer.email}</p>
+          <p className="text-sm text-muted-foreground truncate">{customer.phone}</p>
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+      <div className="mt-4 grid grid-cols-2 gap-2 text-center">
         <div className="rounded-lg bg-muted/50 p-2">
-          <p className="text-xs text-muted-foreground">Puntos</p>
-          <p className="text-sm font-semibold text-foreground">{customer.points.toLocaleString()}</p>
+          <p className="text-xs text-muted-foreground">Sellos</p>
+          <p className="text-sm font-semibold text-foreground">
+            {customer.stamps}/{customer.stampsRequired}
+          </p>
         </div>
         <div className="rounded-lg bg-muted/50 p-2">
-          <p className="text-xs text-muted-foreground">Visitas</p>
-          <p className="text-sm font-semibold text-foreground">{customer.totalVisits}</p>
-        </div>
-        <div className="rounded-lg bg-muted/50 p-2">
-          <p className="text-xs text-muted-foreground">Última visita</p>
+          <p className="text-xs text-muted-foreground">Registro</p>
           <p className="text-xs font-medium text-foreground">
-            {formatDistanceToNow(new Date(customer.lastVisit), {
+            {formatDistanceToNow(new Date(customer.createdAt), {
               addSuffix: true,
               locale: es,
             })}

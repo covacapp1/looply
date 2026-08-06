@@ -7,12 +7,14 @@ import type { ReactNode } from "react";
 interface PageHeaderProps {
   title: string;
   description?: string;
+  subtitle?: string;
   actions?: ReactNode;
   breadcrumbs?: { label: string; href?: string }[];
   showMenuButton?: boolean;
 }
 
-export function PageHeader({ title, description, actions, breadcrumbs, showMenuButton = true }: PageHeaderProps) {
+export function PageHeader({ title, description, subtitle, actions, breadcrumbs, showMenuButton = true }: PageHeaderProps) {
+  const desc = description || subtitle;
   return (
     <motion.div
       className="mb-6"
@@ -48,7 +50,7 @@ export function PageHeader({ title, description, actions, breadcrumbs, showMenuB
           )}
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{title}</h1>
-            {description && <p className="text-muted-foreground mt-1">{description}</p>}
+            {desc && <p className="text-muted-foreground mt-1">{desc}</p>}
           </div>
         </div>
         {actions && <div className="flex items-center gap-2">{actions}</div>}
