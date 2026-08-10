@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { CreditCard, Globe, DollarSign } from "lucide-react";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("business");
@@ -16,18 +17,12 @@ export default function SettingsPage() {
       <PageHeader
         title="Configuración"
         description="Gestiona la configuración de tu negocio"
-        breadcrumbs={[
-          { label: "Dashboard", href: "/" },
-          { label: "Configuración" },
-        ]}
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-muted">
           <TabsTrigger value="business">Negocio</TabsTrigger>
-          <TabsTrigger value="appearance">Apariencia</TabsTrigger>
-          <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
-          <TabsTrigger value="billing">Facturación</TabsTrigger>
+          <TabsTrigger value="subscription">Suscripción</TabsTrigger>
         </TabsList>
 
         <TabsContent value="business" className="space-y-6">
@@ -54,7 +49,7 @@ export default function SettingsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="phone">Teléfono</Label>
-                  <Input id="phone" placeholder="Ej: +52 55 1234 5678" />
+                  <Input id="phone" placeholder="Ej: +54 11 1234 5678" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
@@ -68,11 +63,11 @@ export default function SettingsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="city">Ciudad</Label>
-                  <Input id="city" placeholder="Ej: Ciudad de México" />
+                  <Input id="city" placeholder="Ej: Buenos Aires" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="country">País</Label>
-                  <Input id="country" placeholder="Ej: México" />
+                  <Input id="country" placeholder="Ej: Argentina" />
                 </div>
               </div>
               <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
@@ -104,7 +99,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="whatsapp">WhatsApp</Label>
-                  <Input id="whatsapp" placeholder="Ej: +525512345678" />
+                  <Input id="whatsapp" placeholder="Ej: +541112345678" />
                 </div>
               </div>
               <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
@@ -114,79 +109,85 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="appearance" className="space-y-6">
-          <Card className="border-border">
-            <CardHeader>
-              <CardTitle>Apariencia</CardTitle>
-              <CardDescription>Personaliza el aspecto de tu negocio</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Color Principal</Label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    defaultValue="#10b981"
-                    className="h-10 w-10 rounded-lg border border-border cursor-pointer"
-                  />
-                  <Input defaultValue="#10b981" className="w-32" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Logo del Negocio</Label>
-                <div className="flex items-center gap-4">
-                  <div className="h-20 w-20 rounded-xl bg-muted flex items-center justify-center">
-                    <span className="text-2xl font-bold text-muted-foreground">?</span>
-                  </div>
-                  <Button variant="outline">Subir Logo</Button>
-                </div>
-              </div>
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-                Guardar Cambios
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="notifications" className="space-y-6">
-          <Card className="border-border">
-            <CardHeader>
-              <CardTitle>Notificaciones</CardTitle>
-              <CardDescription>Configura las notificaciones push (preparado para PWA)</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {[
-                { label: "Nuevos clientes", description: "Recibe notificación cuando un nuevo cliente se una" },
-                { label: "Cumpleaños", description: "Recordatorio de cumpleaños de clientes" },
-                { label: "Promociones", description: "Notificaciones de nuevas promociones" },
-                { label: "Recompensas", description: "Cuando un cliente canjee una recompensa" },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground">{item.label}</p>
-                    <p className="text-sm text-muted-foreground">{item.description}</p>
-                  </div>
-                  <Switch />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="billing" className="space-y-6">
+        <TabsContent value="subscription" className="space-y-6">
           <Card className="border-border">
             <CardHeader>
               <CardTitle>Plan Actual</CardTitle>
-              <CardDescription>Gestiona tu suscripción</CardDescription>
+              <CardDescription>Tu plan de suscripción en LOOPLY</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-lg font-bold text-foreground">Plan Professional</p>
-                    <p className="text-sm text-muted-foreground">$499/mes</p>
+                    <p className="text-lg font-bold text-foreground">Plan Único</p>
+                    <p className="text-sm text-muted-foreground">Todo incluido para tu negocio</p>
                   </div>
-                  <Button variant="outline">Cambiar Plan</Button>
+                  <Badge className="bg-primary text-primary-foreground">Activo</Badge>
+                </div>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>✓ Tarjetas de fidelidad ilimitadas</p>
+                  <p>✓ Clientes ilimitados</p>
+                  <p>✓ Menú digital</p>
+                  <p>✓ Notificaciones WhatsApp</p>
+                  <p>✓ Reportes y estadísticas</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle>Método de Pago</CardTitle>
+              <CardDescription>Vinculá tu cuenta para recibir pagos</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-border p-4 hover:border-primary/50 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <CreditCard className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Argentina</p>
+                      <p className="text-xs text-muted-foreground">Pago en ARS</p>
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-primary" />
+                      <p className="text-sm font-medium">Mercado Pago</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Vinculá tu cuenta de Mercado Pago para recibir pagos en pesos argentinos
+                    </p>
+                  </div>
+                  <Button variant="outline" className="w-full mt-3" size="sm">
+                    Vincular Mercado Pago
+                  </Button>
+                </div>
+
+                <div className="rounded-xl border border-border p-4 hover:border-primary/50 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <Globe className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Internacional</p>
+                      <p className="text-xs text-muted-foreground">Pago en USD</p>
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-primary" />
+                      <p className="text-sm font-medium">PayPal</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Vinculá tu cuenta de PayPal para recibir pagos en dólares
+                    </p>
+                  </div>
+                  <Button variant="outline" className="w-full mt-3" size="sm">
+                    Vincular PayPal
+                  </Button>
                 </div>
               </div>
             </CardContent>
