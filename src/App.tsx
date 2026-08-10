@@ -12,6 +12,7 @@ import PromotionsPage from "@/pages/Promotions";
 import CustomersPage from "@/pages/Customers";
 import StatisticsPage from "@/pages/Statistics";
 import SettingsPage from "@/pages/Settings";
+import NotificationsPage from "@/pages/Notifications";
 import AdminPage from "@/pages/Admin";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -82,6 +83,7 @@ export default function App() {
               <Route path="/customers" element={<CustomersPage />} />
               <Route path="/customers/:id" element={<CustomersPage />} />
               <Route path="/statistics" element={<StatisticsPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/admin" element={<AdminPage />} />
             </Route>

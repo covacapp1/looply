@@ -6,7 +6,7 @@ const mobileNavItems = [
   { label: "Menú", href: "/", icon: LayoutDashboard },
   { label: "Fidelidad", href: "/loyalty", icon: Heart },
   { label: "Clientes", href: "/customers", icon: Users },
-  { label: "Reportes", href: "/statistics", icon: BarChart3 },
+  { label: "Notificaciones", href: "/notifications", icon: Bell },
   { label: "Admin", href: "/admin", icon: Shield },
 ];
 

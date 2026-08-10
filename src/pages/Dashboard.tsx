@@ -6,14 +6,15 @@ import {
   Contact,
   BarChart3,
   Settings,
+  Bell,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const menuItems = [
   { label: "Tarjetas de Fidelidad", href: "/loyalty", icon: Heart, color: "text-rose-500" },
   { label: "Menú Digital", href: "/menu", icon: UtensilsCrossed, color: "text-amber-500" },
   { label: "Clientes", href: "/customers", icon: Contact, color: "text-sky-500" },
   { label: "Reportes", href: "/statistics", icon: BarChart3, color: "text-lime-500" },
+  { label: "Notificaciones", href: "/notifications", icon: Bell, color: "text-violet-500" },
   { label: "Configuración", href: "/settings", icon: Settings, color: "text-gray-500" },
 ];
 
