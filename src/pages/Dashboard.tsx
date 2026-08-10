@@ -28,9 +28,7 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="h-14 w-14 rounded-xl bg-primary flex items-center justify-center shadow-lg mb-2">
-            <span className="text-2xl font-bold text-primary-foreground">L</span>
-          </div>
+          <img src="/logo2.png" alt="LOOPLY" className="h-16 w-16 rounded-xl shadow-lg mb-2 object-cover" />
           <h1 className="text-lg font-bold text-foreground tracking-tight">LOOPLY</h1>
         </motion.div>
       </div>

@@ -204,9 +204,7 @@ export default function RewardClaimPage() {
       >
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="h-14 w-14 rounded-xl bg-primary flex items-center justify-center shadow-lg mx-auto mb-3">
-            <span className="text-2xl font-bold text-primary-foreground">L</span>
-          </div>
+          <img src="/logo2.png" alt="LOOPLY" className="h-16 w-16 rounded-xl shadow-lg mx-auto mb-3 object-cover" />
           <h1 className="text-2xl font-bold text-foreground">LOOPLY</h1>
         </div>
 
