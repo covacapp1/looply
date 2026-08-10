@@ -9,7 +9,6 @@ const navItems = [
   { label: "Menú", href: "/" },
   { label: "Tarjetas de Fidelidad", href: "/loyalty" },
   { label: "Menú Digital", href: "/menu" },
-  { label: "Carta de Precios", href: "/menu/pricing" },
   { label: "Clientes", href: "/customers" },
   { label: "Reportes", href: "/statistics" },
   { label: "Configuración", href: "/settings" },

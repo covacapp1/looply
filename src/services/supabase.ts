@@ -1,8 +1,10 @@
-import { supabase } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import type { LoyaltyReward, Customer, StampHistory } from "@/types";
 
 // Rewards
 export async function getRewards(): Promise<LoyaltyReward[]> {
+  if (!isSupabaseConfigured() || !supabase) return [];
+
   const { data, error } = await supabase
     .from("loyalty_rewards")
     .select("*")
@@ -26,6 +28,8 @@ export async function getRewards(): Promise<LoyaltyReward[]> {
 }
 
 export async function getRewardById(id: string): Promise<LoyaltyReward | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+
   const { data, error } = await supabase
     .from("loyalty_rewards")
     .select("*")
@@ -50,6 +54,8 @@ export async function getRewardById(id: string): Promise<LoyaltyReward | null> {
 }
 
 export async function createReward(reward: Omit<LoyaltyReward, "id" | "createdAt">): Promise<LoyaltyReward | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+
   const { data, error } = await supabase
     .from("loyalty_rewards")
     .insert({
@@ -82,6 +88,8 @@ export async function createReward(reward: Omit<LoyaltyReward, "id" | "createdAt
 
 // Customers
 export async function getCustomersByReward(rewardId: string): Promise<Customer[]> {
+  if (!isSupabaseConfigured() || !supabase) return [];
+
   const { data, error } = await supabase
     .from("customers")
     .select("*")
@@ -109,6 +117,8 @@ export async function getCustomersByReward(rewardId: string): Promise<Customer[]
 }
 
 export async function searchCustomerByPhone(phone: string): Promise<Customer | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+
   const { data, error } = await supabase
     .from("customers")
     .select("*")
@@ -141,6 +151,8 @@ export async function createCustomer(customer: {
   phone: string;
   countryCode?: string;
 }): Promise<Customer | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+
   const { data, error } = await supabase
     .from("customers")
     .insert({
@@ -175,7 +187,8 @@ export async function createCustomer(customer: {
 
 // Stamps
 export async function addStamp(customerId: string): Promise<{ customer: Customer | null; history: StampHistory | null }> {
-  // Get current customer
+  if (!isSupabaseConfigured() || !supabase) return { customer: null, history: null };
+
   const { data: customerData, error: customerError } = await supabase
     .from("customers")
     .select("*")
@@ -188,7 +201,6 @@ export async function addStamp(customerId: string): Promise<{ customer: Customer
 
   const newStamps = customerData.stamps + 1;
 
-  // Get reward to check if completed
   const { data: rewardData } = await supabase
     .from("loyalty_rewards")
     .select("stamps_required, name")
@@ -197,7 +209,6 @@ export async function addStamp(customerId: string): Promise<{ customer: Customer
 
   const isCompleted = rewardData ? newStamps >= rewardData.stamps_required : false;
 
-  // Update customer stamps
   const { data: updatedCustomer, error: updateError } = await supabase
     .from("customers")
     .update({
@@ -214,7 +225,6 @@ export async function addStamp(customerId: string): Promise<{ customer: Customer
     return { customer: null, history: null };
   }
 
-  // Create history entry
   const message = isCompleted
     ? `🎉 ¡Felicitaciones! Ya puedes canjear tu premio: ${rewardData?.name}`
     : `Gracias por elegir ${rewardData?.name}. Tu tarjeta tiene ${newStamps} de ${rewardData?.stamps_required} sellos`;
@@ -265,10 +275,13 @@ export async function addStamp(customerId: string): Promise<{ customer: Customer
 
 // Stats
 export async function getBusinessStats() {
-  const [rewardsResult, customersResult, historyResult] = await Promise.all([
+  if (!isSupabaseConfigured() || !supabase) {
+    return { totalRewards: 0, totalCustomers: 0, totalStamps: 0, completedCards: 0 };
+  }
+
+  const [rewardsResult, customersResult] = await Promise.all([
     supabase.from("loyalty_rewards").select("id", { count: "exact", head: true }),
     supabase.from("customers").select("id, stamps, is_completed", { count: "exact" }),
-    supabase.from("stamp_history").select("id", { count: "exact", head: true }),
   ]);
 
   return {
