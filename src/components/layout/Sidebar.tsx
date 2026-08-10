@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { label: "Menú", href: "/" },
@@ -14,6 +15,10 @@ const navItems = [
   { label: "Configuración", href: "/settings" },
 ];
 
+const adminItems = [
+  { label: "Admin", href: "/admin" },
+];
+
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -21,6 +26,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
+  const { profile, signOut } = useAuth();
 
   return (
     <>
@@ -66,15 +72,38 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </Link>
                 );
               })}
+              {profile?.role === "admin" && (
+                <>
+                  <div className="mx-5 my-2 border-t border-border" />
+                  {adminItems.map((item) => {
+                    const isActive = location.pathname === item.href;
+                    return (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        className={cn(
+                          "block px-5 py-3 text-sm transition-colors border-l-4",
+                          isActive
+                            ? "bg-amber-500/10 text-amber-600 border-amber-500 font-medium"
+                            : "text-amber-600 border-transparent hover:bg-amber-500/10 hover:text-amber-700 hover:border-amber-500/30"
+                        )}
+                        onClick={onClose}
+                      >
+                        ⚡ {item.label}
+                      </Link>
+                    );
+                  })}
+                </>
+              )}
             </nav>
           </ScrollArea>
 
-          {/* Close button - mobile only */}
-          <div className="p-4 border-t border-border lg:hidden">
+          {/* Logout button */}
+          <div className="p-4 border-t border-border">
             <Button
-              variant="destructive"
+              variant="outline"
               className="w-full"
-              onClick={onClose}
+              onClick={() => { signOut(); onClose(); }}
             >
               Cerrar Sesión
             </Button>

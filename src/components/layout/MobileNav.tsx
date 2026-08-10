@@ -1,17 +1,20 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Heart, Users, BarChart3, Settings } from "lucide-react";
+import { LayoutDashboard, Heart, Users, BarChart3, Settings, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const mobileNavItems = [
-  { label: "Menú", href: "/", icon: LayoutDashboard },
-  { label: "Fidelidad", href: "/loyalty", icon: Heart },
-  { label: "Clientes", href: "/customers", icon: Users },
-  { label: "Reportes", href: "/statistics", icon: BarChart3 },
-  { label: "Ajustes", href: "/settings", icon: Settings },
-];
+import { useAuth } from "@/contexts/AuthContext";
 
 export function MobileNav() {
   const location = useLocation();
+  const { profile } = useAuth();
+
+  const mobileNavItems = [
+    { label: "Menú", href: "/", icon: LayoutDashboard },
+    { label: "Fidelidad", href: "/loyalty", icon: Heart },
+    { label: "Clientes", href: "/customers", icon: Users },
+    { label: "Reportes", href: "/statistics", icon: BarChart3 },
+    { label: "Ajustes", href: "/settings", icon: Settings },
+    ...(profile?.role === "admin" ? [{ label: "Admin", href: "/admin", icon: Shield }] : []),
+  ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-sm lg:hidden">
@@ -23,9 +26,11 @@ export function MobileNav() {
               key={item.href}
               to={item.href}
               className={cn(
-                "flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-colors min-w-[56px]",
+                "flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-colors min-w-[48px]",
                 isActive
-                  ? "text-primary"
+                  ? item.href === "/admin"
+                    ? "text-amber-600"
+                    : "text-primary"
                   : "text-muted-foreground"
               )}
             >
