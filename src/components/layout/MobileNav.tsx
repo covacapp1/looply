@@ -1,12 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Heart, Users, BarChart3, Settings, Shield, Bell } from "lucide-react";
+import { LayoutDashboard, Heart, Users, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const mobileNavItems = [
   { label: "Menú", href: "/", icon: LayoutDashboard },
   { label: "Fidelidad", href: "/loyalty", icon: Heart },
   { label: "Clientes", href: "/customers", icon: Users },
-  { label: "Notificaciones", href: "/notifications", icon: Bell },
   { label: "Admin", href: "/admin", icon: Shield },
 ];
 
