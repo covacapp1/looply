@@ -8,6 +8,7 @@ import {
   Settings,
   Bell,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const menuItems = [
   { label: "Tarjetas de Fidelidad", href: "/loyalty", icon: Heart, color: "text-rose-500" },
