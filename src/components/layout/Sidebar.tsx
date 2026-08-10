@@ -72,29 +72,25 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </Link>
                 );
               })}
-              {profile?.role === "admin" && (
-                <>
-                  <div className="mx-5 my-2 border-t border-border" />
-                  {adminItems.map((item) => {
-                    const isActive = location.pathname === item.href;
-                    return (
-                      <Link
-                        key={item.href}
-                        to={item.href}
-                        className={cn(
-                          "block px-5 py-3 text-sm transition-colors border-l-4",
-                          isActive
-                            ? "bg-amber-500/10 text-amber-600 border-amber-500 font-medium"
-                            : "text-amber-600 border-transparent hover:bg-amber-500/10 hover:text-amber-700 hover:border-amber-500/30"
-                        )}
-                        onClick={onClose}
-                      >
-                        ⚡ {item.label}
-                      </Link>
-                    );
-                  })}
-                </>
-              )}
+              <div className="mx-5 my-2 border-t border-border" />
+              {adminItems.map((item) => {
+                const isActive = location.pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    className={cn(
+                      "block px-5 py-3 text-sm transition-colors border-l-4",
+                      isActive
+                        ? "bg-amber-500/10 text-amber-600 border-amber-500 font-medium"
+                        : "text-amber-600 border-transparent hover:bg-amber-500/10 hover:text-amber-700 hover:border-amber-500/30"
+                    )}
+                    onClick={onClose}
+                  >
+                    ⚡ {item.label}
+                  </Link>
+                );
+              })}
             </nav>
           </ScrollArea>
 
