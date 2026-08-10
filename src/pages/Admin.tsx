@@ -35,28 +35,17 @@ interface AppUser {
 }
 
 export default function AdminPage() {
-  const { profile, user } = useAuth();
+  const { profile } = useAuth();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showNotification, setShowNotification] = useState(false);
   const [notificationForm, setNotificationForm] = useState({ title: "", message: "" });
   const [sending, setSending] = useState(false);
-  const [makingAdmin, setMakingAdmin] = useState(false);
 
   useEffect(() => {
     loadUsers();
   }, []);
-
-  async function becomeAdmin() {
-    if (!user) return;
-    setMakingAdmin(true);
-    await supabase
-      .from("app_users")
-      .update({ role: "admin", subscription: "lifetime" })
-      .eq("id", user.id);
-    window.location.reload();
-  }
 
   async function loadUsers() {
     const { data } = await supabase
@@ -120,19 +109,7 @@ export default function AdminPage() {
   if (profile?.role !== "admin") {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <Card className="max-w-md w-full">
-          <CardContent className="p-8 text-center">
-            <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-lg font-semibold mb-2">Acceso de Administrador</p>
-            <p className="text-sm text-muted-foreground mb-4">
-              Necesitás permisos de administrador para acceder a esta sección
-            </p>
-            <Button onClick={becomeAdmin} disabled={makingAdmin}>
-              {makingAdmin ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Shield className="h-4 w-4 mr-2" />}
-              Hacerme Admin
-            </Button>
-          </CardContent>
-        </Card>
+        <p className="text-muted-foreground">No tienes acceso de administrador</p>
       </div>
     );
   }
