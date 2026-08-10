@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .eq("id", userId)
       .single();
 
-    console.log("Profile fetched:", data, error);
+    console.log("Profile fetched:", data, error, "userId:", userId);
     setProfile(data);
     setLoading(false);
   }
