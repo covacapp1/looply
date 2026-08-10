@@ -53,12 +53,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function fetchProfile(userId: string) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("app_users")
       .select("role, subscription, full_name")
       .eq("id", userId)
       .single();
 
+    console.log("Profile fetched:", data, error);
     setProfile(data);
     setLoading(false);
   }
