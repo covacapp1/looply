@@ -499,14 +499,25 @@ export default function LoyaltyPage() {
               </div>
               <p className="font-semibold">Sello agregado</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Se envió WhatsApp a {selectedCustomer?.firstName}
+                Enviá el mensaje a {selectedCustomer?.firstName}
               </p>
             </div>
             <div className="p-3 rounded-lg bg-muted/50">
-              <p className="text-xs text-muted-foreground">Mensaje enviado:</p>
+              <p className="text-xs text-muted-foreground">Mensaje:</p>
               <p className="text-sm font-medium mt-1">{lastMessage}</p>
             </div>
-            <Button onClick={() => setShowStampDialog(false)} className="w-full">
+            <a
+              href={`https://wa.me/${selectedCustomer?.countryCode?.replace("+", "")}${selectedCustomer?.phone}?text=${encodeURIComponent(lastMessage)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block"
+            >
+              <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Enviar por WhatsApp
+              </Button>
+            </a>
+            <Button onClick={() => setShowStampDialog(false)} variant="outline" className="w-full">
               Cerrar
             </Button>
           </div>
