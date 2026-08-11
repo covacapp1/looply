@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,31 +10,68 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Wallet, TrendingUp, ShoppingCart, PlusCircle, DollarSign } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getSalesByMerchant, createSale } from "@/services/supabase";
-import type { Sale } from "@/types";
+import { getSalesByMerchant, createSale, getMenuItems } from "@/services/supabase";
+import type { Sale, MenuItem } from "@/types";
 import { toast } from "sonner";
 
 export default function CajaPage() {
   const { user } = useAuth();
   const [sales, setSales] = useState<Sale[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Manual sale form
+  const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const [manualQty, setManualQty] = useState("1");
   const [manualAmount, setManualAmount] = useState("");
   const [manualDesc, setManualDesc] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const loadSales = useCallback(async () => {
+  const loadData = useCallback(async () => {
     if (!user) return;
-    const data = await getSalesByMerchant(user.id);
-    setSales(data);
+    const [salesData, menuData] = await Promise.all([
+      getSalesByMerchant(user.id),
+      getMenuItems(user.id),
+    ]);
+    setSales(salesData);
+    setMenuItems(menuData);
     setLoading(false);
   }, [user]);
 
   useEffect(() => {
-    loadSales();
-  }, [loadSales]);
+    loadData();
+  }, [loadData]);
+
+  function handleProductSelect(productId: string) {
+    setSelectedProduct(productId);
+    if (productId === "custom") {
+      setManualAmount("");
+      setManualDesc("");
+      setManualQty("1");
+    } else {
+      const item = menuItems.find((m) => m.id === productId);
+      if (item) {
+        setManualAmount(item.price.toString());
+        setManualDesc(item.name);
+        setManualQty("1");
+      }
+    }
+  }
+
+  function updateTotal() {
+    if (selectedProduct && selectedProduct !== "custom") {
+      const item = menuItems.find((m) => m.id === selectedProduct);
+      if (item) {
+        const qty = parseInt(manualQty) || 1;
+        setManualAmount((item.price * qty).toString());
+      }
+    }
+  }
+
+  useEffect(() => {
+    updateTotal();
+  }, [manualQty, selectedProduct]);
 
   async function handleManualSale() {
     if (!user || !manualAmount || parseFloat(manualAmount) <= 0) return;
@@ -49,8 +86,10 @@ export default function CajaPage() {
 
     if (sale) {
       setSales((prev) => [sale, ...prev]);
+      setSelectedProduct("");
       setManualAmount("");
       setManualDesc("");
+      setManualQty("1");
       setDialogOpen(false);
       toast.success("Venta registrada");
     }
@@ -85,31 +124,90 @@ export default function CajaPage() {
               </DialogHeader>
               <div className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="amount">Monto ($)</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    value={manualAmount}
-                    onChange={(e) => setManualAmount(e.target.value)}
-                  />
+                  <Label>Producto</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {menuItems.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleProductSelect(item.id)}
+                        className={`p-3 rounded-lg border text-left transition-all ${
+                          selectedProduct === item.id
+                            ? "border-primary bg-primary/5 ring-1 ring-primary"
+                            : "border-border hover:border-primary/30"
+                        }`}
+                      >
+                        {item.imageUrl && (
+                          <img src={item.imageUrl} alt={item.name} className="h-12 w-12 rounded object-cover mb-1" />
+                        )}
+                        <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
+                        <p className="text-xs text-primary font-bold">${item.price.toLocaleString("es-AR")}</p>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => handleProductSelect("custom")}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        selectedProduct === "custom"
+                          ? "border-primary bg-primary/5 ring-1 ring-primary"
+                          : "border-border hover:border-primary/30 border-dashed"
+                      }`}
+                    >
+                      <p className="text-sm font-medium text-muted-foreground">Otro / Personalizado</p>
+                    </button>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="desc">Descripción</Label>
-                  <Textarea
-                    id="desc"
-                    placeholder="Ej: Venta en efectivo, propina, etc."
-                    value={manualDesc}
-                    onChange={(e) => setManualDesc(e.target.value)}
-                    rows={2}
-                  />
-                </div>
+
+                {selectedProduct && selectedProduct !== "custom" && (
+                  <div className="space-y-2">
+                    <Label>Cantidad</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={manualQty}
+                      onChange={(e) => setManualQty(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {selectedProduct === "custom" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Descripción</Label>
+                      <Textarea
+                        placeholder="Ej: Venta en efectivo, propina, etc."
+                        value={manualDesc}
+                        onChange={(e) => setManualDesc(e.target.value)}
+                        rows={2}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Monto ($)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={manualAmount}
+                        onChange={(e) => setManualAmount(e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedProduct && selectedProduct !== "custom" && (
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
+                    <span className="text-sm text-muted-foreground">Total</span>
+                    <span className="text-lg font-bold text-foreground">
+                      ${parseFloat(manualAmount || "0").toLocaleString("es-AR")}
+                    </span>
+                  </div>
+                )}
+
                 <Button
                   className="w-full"
                   onClick={handleManualSale}
-                  disabled={saving || !manualAmount || parseFloat(manualAmount) <= 0}
+                  disabled={saving || !manualAmount || parseFloat(manualAmount) <= 0 || !selectedProduct}
                 >
                   {saving ? "Guardando..." : "Registrar Venta"}
                 </Button>
