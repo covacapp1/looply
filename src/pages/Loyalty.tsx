@@ -40,6 +40,7 @@ import {
   User,
   Star,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 
 export default function LoyaltyPage() {
@@ -73,6 +74,11 @@ export default function LoyaltyPage() {
 
   useEffect(() => {
     loadData();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") loadData();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, []);
 
   async function loadData() {
@@ -154,10 +160,16 @@ export default function LoyaltyPage() {
         title="Tarjetas de Fidelidad"
         subtitle="Gestiona tus premios y clientes"
         actions={
-          <Button onClick={() => setShowAddCustomer(true)}>
-            <User className="h-4 w-4 mr-2" />
-            Cargar Cliente
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={loadData}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Actualizar
+            </Button>
+            <Button onClick={() => setShowAddCustomer(true)}>
+              <User className="h-4 w-4 mr-2" />
+              Cargar Cliente
+            </Button>
+          </div>
         }
       />
 
