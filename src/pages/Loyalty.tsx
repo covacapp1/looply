@@ -43,7 +43,9 @@ import {
   Loader2,
   RefreshCw,
   Trash2,
+  RotateCcw,
 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function LoyaltyPage() {
   const [rewards, setRewards] = useState<LoyaltyReward[]>([]);
@@ -162,6 +164,16 @@ export default function LoyaltyPage() {
     if (!confirm("¿Eliminar este cliente?")) return;
     await supabase.from("customers").delete().eq("id", customerId);
     loadData();
+  }
+
+  async function handleResetCard(customer: Customer) {
+    if (!confirm(`¿Reiniciar la tarjeta de ${customer.firstName}? Se perderán los sellos actuales.`)) return;
+    await supabase
+      .from("customers")
+      .update({ stamps: 0, is_completed: false, completed_at: null })
+      .eq("id", customer.id);
+    loadData();
+    toast.success("Tarjeta reiniciada");
   }
 
   if (loading) {
@@ -352,7 +364,17 @@ export default function LoyaltyPage() {
                                   Sello
                                 </Button>
                               ) : (
-                                <Badge className="bg-emerald-500">Canjeado</Badge>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleResetCard(customer);
+                                  }}
+                                >
+                                  <RotateCcw className="h-3 w-3 mr-1" />
+                                  Reiniciar
+                                </Button>
                               )}
                               <Button
                                 variant="ghost"
@@ -591,7 +613,7 @@ export default function LoyaltyPage() {
               );
             })()}
             <div className="flex gap-2">
-              {!selectedCustomer.isCompleted && (
+              {!selectedCustomer.isCompleted ? (
                 <Button
                   onClick={() => {
                     handleAddStamp(selectedCustomer);
@@ -601,6 +623,18 @@ export default function LoyaltyPage() {
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Agregar Sello
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    handleResetCard(selectedCustomer);
+                    setSelectedCustomer(null);
+                  }}
+                  className="flex-1"
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Reiniciar Tarjeta
                 </Button>
               )}
               <Button variant="outline" onClick={() => setSelectedCustomer(null)} className="flex-1">
