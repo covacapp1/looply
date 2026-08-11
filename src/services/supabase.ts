@@ -398,6 +398,31 @@ export async function deleteMenuItem(id: string): Promise<boolean> {
 }
 
 // ========== SHOP CUSTOMERS ==========
+export async function getShopCustomers(merchantId: string): Promise<ShopCustomer[]> {
+  if (!isSupabaseConfigured() || !supabase) return [];
+
+  const { data, error } = await supabase
+    .from("shop_customers")
+    .select("*")
+    .eq("merchant_id", merchantId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching shop customers:", error);
+    return [];
+  }
+
+  return data.map((c) => ({
+    id: c.id,
+    merchantId: c.merchant_id,
+    phone: c.phone,
+    name: c.name,
+    address: c.address || "",
+    notes: c.notes || "",
+    createdAt: new Date(c.created_at),
+  }));
+}
+
 export async function findShopCustomer(merchantId: string, phone: string): Promise<ShopCustomer | null> {
   if (!isSupabaseConfigured() || !supabase) return null;
 
