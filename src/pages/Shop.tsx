@@ -199,7 +199,7 @@ export default function ShopPage() {
             </div>
             <h1 className="text-2xl font-bold text-foreground">Registrarse</h1>
             <p className="text-muted-foreground text-center mt-1">
-              Completá tus datos para hacer tu primer pedido
+              Completá tus datos por única vez
             </p>
           </div>
 
