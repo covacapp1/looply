@@ -12,6 +12,7 @@ const navItems = [
   { label: "Menú Digital", href: "/menu" },
   { label: "Clientes", href: "/customers" },
   { label: "Pedidos", href: "/orders" },
+  { label: "Caja", href: "/caja" },
   { label: "Reportes", href: "/statistics" },
   { label: "Configuración", href: "/settings" },
 ];

@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import type { LoyaltyReward, Customer, StampHistory } from "@/types";
+import type { LoyaltyReward, Customer, StampHistory, MenuItem, ShopCustomer, Order, Sale } from "@/types";
 
 // Rewards
 export async function getRewards(): Promise<LoyaltyReward[]> {
@@ -294,5 +294,306 @@ export async function getBusinessStats() {
     totalCustomers: customersResult.count || 0,
     totalStamps: customersResult.data?.reduce((acc, c) => acc + (c.stamps || 0), 0) || 0,
     completedCards: customersResult.data?.filter((c) => c.is_completed).length || 0,
+  };
+}
+
+// ========== MENU ITEMS ==========
+export async function getMenuItems(merchantId: string): Promise<MenuItem[]> {
+  if (!isSupabaseConfigured() || !supabase) return [];
+
+  const { data, error } = await supabase
+    .from("menu_items")
+    .select("*")
+    .eq("merchant_id", merchantId)
+    .order("category", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching menu items:", error);
+    return [];
+  }
+
+  return data.map((m) => ({
+    id: m.id,
+    merchantId: m.merchant_id,
+    name: m.name,
+    description: m.description || "",
+    price: m.price,
+    category: m.category || "General",
+    isAvailable: m.is_available,
+    createdAt: new Date(m.created_at),
+  }));
+}
+
+export async function createMenuItem(item: Omit<MenuItem, "id" | "createdAt">): Promise<MenuItem | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+
+  const { data, error } = await supabase
+    .from("menu_items")
+    .insert({
+      merchant_id: item.merchantId,
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      category: item.category,
+      is_available: item.isAvailable,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating menu item:", error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    merchantId: data.merchant_id,
+    name: data.name,
+    description: data.description || "",
+    price: data.price,
+    category: data.category,
+    isAvailable: data.is_available,
+    createdAt: new Date(data.created_at),
+  };
+}
+
+export async function updateMenuItem(id: string, updates: Partial<MenuItem>): Promise<MenuItem | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+
+  const { data, error } = await supabase
+    .from("menu_items")
+    .update({
+      name: updates.name,
+      description: updates.description,
+      price: updates.price,
+      category: updates.category,
+      is_available: updates.isAvailable,
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating menu item:", error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    merchantId: data.merchant_id,
+    name: data.name,
+    description: data.description || "",
+    price: data.price,
+    category: data.category,
+    isAvailable: data.is_available,
+    createdAt: new Date(data.created_at),
+  };
+}
+
+export async function deleteMenuItem(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured() || !supabase) return false;
+
+  const { error } = await supabase.from("menu_items").delete().eq("id", id);
+  return !error;
+}
+
+// ========== SHOP CUSTOMERS ==========
+export async function findShopCustomer(merchantId: string, phone: string): Promise<ShopCustomer | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+
+  const { data, error } = await supabase
+    .from("shop_customers")
+    .select("*")
+    .eq("merchant_id", merchantId)
+    .eq("phone", phone)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return {
+    id: data.id,
+    merchantId: data.merchant_id,
+    phone: data.phone,
+    name: data.name,
+    address: data.address || "",
+    notes: data.notes || "",
+    createdAt: new Date(data.created_at),
+  };
+}
+
+export async function createShopCustomer(customer: {
+  merchantId: string;
+  phone: string;
+  name: string;
+  address?: string;
+  notes?: string;
+}): Promise<ShopCustomer | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+
+  const { data, error } = await supabase
+    .from("shop_customers")
+    .insert({
+      merchant_id: customer.merchantId,
+      phone: customer.phone,
+      name: customer.name,
+      address: customer.address || "",
+      notes: customer.notes || "",
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating shop customer:", error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    merchantId: data.merchant_id,
+    phone: data.phone,
+    name: data.name,
+    address: data.address || "",
+    notes: data.notes || "",
+    createdAt: new Date(data.created_at),
+  };
+}
+
+// ========== ORDERS ==========
+export async function getOrdersByMerchant(merchantId: string): Promise<Order[]> {
+  if (!isSupabaseConfigured() || !supabase) return [];
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*, shop_customers(name, phone, address)")
+    .eq("merchant_id", merchantId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching orders:", error);
+    return [];
+  }
+
+  return data.map((o) => ({
+    id: o.id,
+    merchantId: o.merchant_id,
+    customerId: o.customer_id,
+    customerName: o.shop_customers?.name || "",
+    customerPhone: o.shop_customers?.phone || "",
+    customerAddress: o.shop_customers?.address || "",
+    items: o.items || [],
+    total: o.total,
+    status: o.status,
+    createdAt: new Date(o.created_at),
+    updatedAt: new Date(o.updated_at),
+  }));
+}
+
+export async function createOrder(order: {
+  merchantId: string;
+  customerId: string;
+  items: { menuItemId: string; name: string; price: number; quantity: number }[];
+  total: number;
+}): Promise<Order | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+
+  const { data, error } = await supabase
+    .from("orders")
+    .insert({
+      merchant_id: order.merchantId,
+      customer_id: order.customerId,
+      items: order.items,
+      total: order.total,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating order:", error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    merchantId: data.merchant_id,
+    customerId: data.customer_id,
+    items: data.items,
+    total: data.total,
+    status: data.status,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+  };
+}
+
+export async function updateOrderStatus(orderId: string, status: Order["status"]): Promise<boolean> {
+  if (!isSupabaseConfigured() || !supabase) return false;
+
+  const { error } = await supabase
+    .from("orders")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("id", orderId);
+
+  return !error;
+}
+
+// ========== SALES ==========
+export async function getSalesByMerchant(merchantId: string): Promise<Sale[]> {
+  if (!isSupabaseConfigured() || !supabase) return [];
+
+  const { data, error } = await supabase
+    .from("sales")
+    .select("*")
+    .eq("merchant_id", merchantId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching sales:", error);
+    return [];
+  }
+
+  return data.map((s) => ({
+    id: s.id,
+    merchantId: s.merchant_id,
+    orderId: s.order_id,
+    amount: s.amount,
+    description: s.description || "",
+    type: s.type,
+    createdAt: new Date(s.created_at),
+  }));
+}
+
+export async function createSale(sale: {
+  merchantId: string;
+  orderId?: string;
+  amount: number;
+  description: string;
+  type: "order" | "manual";
+}): Promise<Sale | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+
+  const { data, error } = await supabase
+    .from("sales")
+    .insert({
+      merchant_id: sale.merchantId,
+      order_id: sale.orderId || null,
+      amount: sale.amount,
+      description: sale.description,
+      type: sale.type,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating sale:", error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    merchantId: data.merchant_id,
+    orderId: data.order_id,
+    amount: data.amount,
+    description: data.description || "",
+    type: data.type,
+    createdAt: new Date(data.created_at),
   };
 }

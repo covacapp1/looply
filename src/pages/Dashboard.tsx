@@ -7,6 +7,7 @@ import {
   BarChart3,
   Settings,
   ShoppingBag,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ const menuItems = [
   { label: "Clientes", href: "/customers", icon: Contact, color: "text-sky-500" },
   { label: "Reportes", href: "/statistics", icon: BarChart3, color: "text-lime-500" },
   { label: "Pedidos", href: "/orders", icon: ShoppingBag, color: "text-violet-500" },
+  { label: "Caja", href: "/caja", icon: Wallet, color: "text-amber-500" },
   { label: "Configuración", href: "/settings", icon: Settings, color: "text-gray-500" },
 ];
 

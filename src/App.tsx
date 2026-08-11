@@ -15,6 +15,8 @@ import SettingsPage from "@/pages/Settings";
 import NotificationsPage from "@/pages/Notifications";
 import AdminPage from "@/pages/Admin";
 import OrdersPage from "@/pages/Orders";
+import ShopPage from "@/pages/Shop";
+import CajaPage from "@/pages/Caja";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -68,6 +70,7 @@ export default function App() {
               }
             />
             <Route path="/reward/:id" element={<RewardClaimPage />} />
+            <Route path="/shop/:merchantId" element={<ShopPage />} />
 
             {/* Protected routes */}
             <Route
@@ -86,6 +89,7 @@ export default function App() {
               <Route path="/statistics" element={<StatisticsPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/orders" element={<OrdersPage />} />
+              <Route path="/caja" element={<CajaPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/admin" element={<AdminPage />} />
             </Route>

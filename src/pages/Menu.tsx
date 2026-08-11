@@ -1,21 +1,235 @@
-import { UtensilsCrossed } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UtensilsCrossed, PlusCircle, Trash2, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { getMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from "@/services/supabase";
+import type { MenuItem } from "@/types";
+import { toast } from "sonner";
 
 export default function MenuPage() {
+  const { user } = useAuth();
+  const [items, setItems] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+
+  // Form
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("General");
+  const [saving, setSaving] = useState(false);
+
+  const loadItems = useCallback(async () => {
+    if (!user) return;
+    const data = await getMenuItems(user.id);
+    setItems(data);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
+
+  function openCreate() {
+    setEditingItem(null);
+    setName("");
+    setDescription("");
+    setPrice("");
+    setCategory("General");
+    setDialogOpen(true);
+  }
+
+  function openEdit(item: MenuItem) {
+    setEditingItem(item);
+    setName(item.name);
+    setDescription(item.description);
+    setPrice(item.price.toString());
+    setCategory(item.category);
+    setDialogOpen(true);
+  }
+
+  async function handleSave() {
+    if (!user || !name.trim() || !price) return;
+    setSaving(true);
+
+    if (editingItem) {
+      const updated = await updateMenuItem(editingItem.id, {
+        name: name.trim(),
+        description: description.trim(),
+        price: parseFloat(price),
+        category,
+        isAvailable: editingItem.isAvailable,
+      });
+      if (updated) {
+        setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+        toast.success("Producto actualizado");
+      }
+    } else {
+      const created = await createMenuItem({
+        merchantId: user.id,
+        name: name.trim(),
+        description: description.trim(),
+        price: parseFloat(price),
+        category,
+        isAvailable: true,
+      });
+      if (created) {
+        setItems((prev) => [...prev, created]);
+        toast.success("Producto agregado");
+      }
+    }
+
+    setDialogOpen(false);
+    setSaving(false);
+  }
+
+  async function handleToggle(item: MenuItem) {
+    const updated = await updateMenuItem(item.id, { isAvailable: !item.isAvailable });
+    if (updated) {
+      setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("¿Eliminar este producto?")) return;
+    const ok = await deleteMenuItem(id);
+    if (ok) {
+      setItems((prev) => prev.filter((i) => i.id !== id));
+      toast.success("Producto eliminado");
+    }
+  }
+
+  const categories = [...new Set(items.map((m) => m.category))];
+
   return (
     <div>
       <PageHeader
         title="Menú Digital"
-        description="Gestiona el menú de tu negocio"
+        description="Gestioná los productos de tu negocio"
+        actions={
+          <Button size="sm" onClick={openCreate}>
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Agregar
+          </Button>
+        }
       />
-      <EmptyState
-        icon={UtensilsCrossed}
-        title="No hay productos"
-        description="Agrega productos para comenzar a crear tu menú digital"
-        actionLabel="Agregar Producto"
-        onAction={() => {}}
-      />
+
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="rounded-full bg-muted p-6 mb-6">
+            <UtensilsCrossed className="h-12 w-12 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">No hay productos</h3>
+          <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
+            Agregá productos para que tus clientes puedan ver tu menú y hacer pedidos
+          </p>
+          <Button onClick={openCreate}>
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Agregar Producto
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {categories.map((cat) => (
+            <div key={cat}>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                {cat}
+              </h2>
+              <div className="space-y-2">
+                {items
+                  .filter((i) => i.category === cat)
+                  .map((item) => (
+                    <Card key={item.id} className={`border-border ${!item.isAvailable ? "opacity-50" : ""}`}>
+                      <CardContent className="p-3 flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-foreground truncate">{item.name}</p>
+                            {!item.isAvailable && <Badge variant="outline" className="text-[10px]">Agotado</Badge>}
+                          </div>
+                          {item.description && (
+                            <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                          )}
+                        </div>
+                        <p className="text-sm font-bold text-primary whitespace-nowrap">
+                          ${item.price.toLocaleString("es-AR")}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleToggle(item)}>
+                            {item.isAvailable ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(item)}>
+                            ✏️
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDelete(item.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "Editar Producto" : "Agregar Producto"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label>Nombre *</Label>
+              <Input placeholder="Ej: Hamburguesa Clásica" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Descripción</Label>
+              <Textarea placeholder="Ingredientes, opciones, etc." value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Precio ($) *</Label>
+                <Input type="number" step="0.01" min="0" placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Categoría</Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="General">General</SelectItem>
+                    <SelectItem value="Entradas">Entradas</SelectItem>
+                    <SelectItem value="Platos">Platos</SelectItem>
+                    <SelectItem value="Bebidas">Bebidas</SelectItem>
+                    <SelectItem value="Postres">Postres</SelectItem>
+                    <SelectItem value="Otros">Otros</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button className="w-full" onClick={handleSave} disabled={saving || !name.trim() || !price}>
+              {saving ? "Guardando..." : editingItem ? "Guardar Cambios" : "Agregar Producto"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

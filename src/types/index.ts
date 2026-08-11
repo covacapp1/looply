@@ -69,6 +69,58 @@ export interface Activity {
   timestamp: Date;
 }
 
+export interface MenuItem {
+  id: string;
+  merchantId: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  isAvailable: boolean;
+  createdAt: Date;
+}
+
+export interface ShopCustomer {
+  id: string;
+  merchantId: string;
+  phone: string;
+  name: string;
+  address: string;
+  notes: string;
+  createdAt: Date;
+}
+
+export interface OrderItem {
+  menuItemId: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+export interface Order {
+  id: string;
+  merchantId: string;
+  customerId: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerAddress?: string;
+  items: OrderItem[];
+  total: number;
+  status: "pending" | "preparing" | "sent" | "delivered" | "cancelled";
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Sale {
+  id: string;
+  merchantId: string;
+  orderId: string | null;
+  amount: number;
+  description: string;
+  type: "order" | "manual";
+  createdAt: Date;
+}
+
 export type ViewMode = "grid" | "list";
 
 export interface FilterOptions {
