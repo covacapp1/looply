@@ -401,7 +401,6 @@ export default function MenuPage() {
             <div className="space-y-2">
               {categories.map((cat) => {
                 const count = items.filter((i) => i.category === cat).length;
-                const isDefault = DEFAULT_CATEGORIES.includes(cat);
                 return (
                   <div key={cat} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
                     <div className="flex items-center gap-2">
@@ -409,16 +408,14 @@ export default function MenuPage() {
                       <span className="text-sm font-medium">{cat}</span>
                       <Badge variant="outline" className="text-[10px]">{count}</Badge>
                     </div>
-                    {!isDefault && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 w-7 p-0 text-destructive"
-                        onClick={() => handleDeleteCategory(cat)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0 text-destructive"
+                      onClick={() => handleDeleteCategory(cat)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 );
               })}
