@@ -143,8 +143,12 @@ export default function LoyaltyPage() {
       if (result.history) {
         setLastMessage(result.history.message);
       }
-      setShowStampDialog(true);
       loadData();
+
+      // Auto-open WhatsApp with the message
+      const phone = `${customer.countryCode?.replace("+", "")}${customer.phone}`;
+      const message = encodeURIComponent(result.history?.message || "");
+      window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
     }
   }
 
@@ -541,30 +545,19 @@ export default function LoyaltyPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="text-center py-2">
-              <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <MessageCircle className="h-7 w-7 text-primary" />
+              <div className="h-14 w-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
+                <Check className="h-7 w-7 text-emerald-600" />
               </div>
               <p className="font-semibold">Sello agregado</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Enviá el mensaje a {selectedCustomer?.firstName}
+                Se abrió WhatsApp con el mensaje para {selectedCustomer?.firstName}
               </p>
             </div>
             <div className="p-3 rounded-lg bg-muted/50">
-              <p className="text-xs text-muted-foreground">Mensaje:</p>
+              <p className="text-xs text-muted-foreground">Mensaje enviado:</p>
               <p className="text-sm font-medium mt-1">{lastMessage}</p>
             </div>
-            <a
-              href={`https://wa.me/${selectedCustomer?.countryCode?.replace("+", "")}${selectedCustomer?.phone}?text=${encodeURIComponent(lastMessage)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block"
-            >
-              <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                <MessageCircle className="h-4 w-4 mr-2" />
-                Enviar por WhatsApp
-              </Button>
-            </a>
-            <Button onClick={() => setShowStampDialog(false)} variant="outline" className="w-full">
+            <Button onClick={() => setShowStampDialog(false)} className="w-full">
               Cerrar
             </Button>
           </div>
