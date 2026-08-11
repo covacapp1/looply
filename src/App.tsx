@@ -14,6 +14,7 @@ import StatisticsPage from "@/pages/Statistics";
 import SettingsPage from "@/pages/Settings";
 import NotificationsPage from "@/pages/Notifications";
 import AdminPage from "@/pages/Admin";
+import OrdersPage from "@/pages/Orders";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -84,6 +85,7 @@ export default function App() {
               <Route path="/customers/:id" element={<CustomersPage />} />
               <Route path="/statistics" element={<StatisticsPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/orders" element={<OrdersPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/admin" element={<AdminPage />} />
             </Route>

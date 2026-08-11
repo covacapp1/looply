@@ -11,6 +11,7 @@ const navItems = [
   { label: "Tarjetas de Fidelidad", href: "/loyalty" },
   { label: "Menú Digital", href: "/menu" },
   { label: "Clientes", href: "/customers" },
+  { label: "Pedidos", href: "/orders" },
   { label: "Reportes", href: "/statistics" },
   { label: "Configuración", href: "/settings" },
 ];
