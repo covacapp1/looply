@@ -12,12 +12,12 @@ import {
 import { cn } from "@/lib/utils";
 
 const menuItems = [
+  { label: "Caja", href: "/caja", icon: Wallet, color: "text-amber-500" },
+  { label: "Pedidos", href: "/orders", icon: ShoppingBag, color: "text-violet-500" },
   { label: "Tarjetas de Fidelidad", href: "/loyalty", icon: Heart, color: "text-rose-500" },
-  { label: "Menú Digital", href: "/menu", icon: UtensilsCrossed, color: "text-amber-500" },
+  { label: "Menú Digital", href: "/menu", icon: UtensilsCrossed, color: "text-orange-500" },
   { label: "Clientes", href: "/customers", icon: Contact, color: "text-sky-500" },
   { label: "Reportes", href: "/statistics", icon: BarChart3, color: "text-lime-500" },
-  { label: "Pedidos", href: "/orders", icon: ShoppingBag, color: "text-violet-500" },
-  { label: "Caja", href: "/caja", icon: Wallet, color: "text-amber-500" },
   { label: "Configuración", href: "/settings", icon: Settings, color: "text-gray-500" },
 ];
 
