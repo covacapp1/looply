@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { QRGenerator } from "@/components/qr/QRGenerator";
 import { StampCardVisual } from "@/components/loyalty/StampCardVisual";
+import { supabase } from "@/lib/supabase";
 import {
   getRewards,
   getRewardById,
@@ -41,6 +42,7 @@ import {
   Star,
   Loader2,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 
 export default function LoyaltyPage() {
@@ -144,6 +146,18 @@ export default function LoyaltyPage() {
       setShowStampDialog(true);
       loadData();
     }
+  }
+
+  async function handleDeleteReward(rewardId: string) {
+    if (!confirm("¿Eliminar este premio? Se eliminarán todos los clientes asociados.")) return;
+    await supabase.from("loyalty_rewards").delete().eq("id", rewardId);
+    loadData();
+  }
+
+  async function handleDeleteCustomer(customerId: string) {
+    if (!confirm("¿Eliminar este cliente?")) return;
+    await supabase.from("customers").delete().eq("id", customerId);
+    loadData();
   }
 
   if (loading) {
@@ -253,17 +267,27 @@ export default function LoyaltyPage() {
                       </CardTitle>
                       <p className="text-sm text-muted-foreground mt-1">{reward.description}</p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => {
-                        setSelectedReward(reward);
-                        setShowQRDialog(true);
-                      }}
-                    >
-                      <QrCode className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => {
+                          setSelectedReward(reward);
+                          setShowQRDialog(true);
+                        }}
+                      >
+                        <QrCode className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:text-red-600"
+                        onClick={() => handleDeleteReward(reward.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -326,6 +350,17 @@ export default function LoyaltyPage() {
                               ) : (
                                 <Badge className="bg-emerald-500">Canjeado</Badge>
                               )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-red-500 hover:text-red-600"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteCustomer(customer.id);
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
                             </div>
                           </div>
                         </div>
