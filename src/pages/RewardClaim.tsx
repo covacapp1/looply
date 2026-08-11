@@ -64,8 +64,8 @@ export default function RewardClaimPage() {
 
     setSubmitting(true);
 
-    // Check if customer already exists with this phone
-    const existing = await searchCustomerByPhone(formData.phone);
+    // Check if customer already exists with this phone for this reward
+    const existing = await searchCustomerByPhone(formData.phone, reward.id);
 
     if (existing) {
       setStep("already_registered");

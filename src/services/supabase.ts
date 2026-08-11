@@ -116,14 +116,19 @@ export async function getCustomersByReward(rewardId: string): Promise<Customer[]
   }));
 }
 
-export async function searchCustomerByPhone(phone: string): Promise<Customer | null> {
+export async function searchCustomerByPhone(phone: string, loyaltyRewardId?: string): Promise<Customer | null> {
   if (!isSupabaseConfigured() || !supabase) return null;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("customers")
     .select("*")
-    .eq("phone", phone)
-    .single();
+    .eq("phone", phone);
+
+  if (loyaltyRewardId) {
+    query = query.eq("loyalty_reward_id", loyaltyRewardId);
+  }
+
+  const { data, error } = await query.maybeSingle();
 
   if (error || !data) {
     return null;
