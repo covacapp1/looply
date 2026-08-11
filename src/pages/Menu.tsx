@@ -28,6 +28,7 @@ export default function MenuPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [cost, setCost] = useState("");
   const [category, setCategory] = useState("General");
   const [imageUrl, setImageUrl] = useState("");
   const [saving, setSaving] = useState(false);
@@ -48,6 +49,7 @@ export default function MenuPage() {
     setName("");
     setDescription("");
     setPrice("");
+    setCost("");
     setCategory("General");
     setImageUrl("");
     setDialogOpen(true);
@@ -58,6 +60,7 @@ export default function MenuPage() {
     setName(item.name);
     setDescription(item.description);
     setPrice(item.price.toString());
+    setCost(item.cost.toString());
     setCategory(item.category);
     setImageUrl(item.imageUrl || "");
     setDialogOpen(true);
@@ -99,6 +102,7 @@ export default function MenuPage() {
         name: name.trim(),
         description: description.trim(),
         price: parseFloat(price),
+        cost: parseFloat(cost) || 0,
         category,
         isAvailable: editingItem.isAvailable,
         imageUrl,
@@ -113,6 +117,7 @@ export default function MenuPage() {
         name: name.trim(),
         description: description.trim(),
         price: parseFloat(price),
+        cost: parseFloat(cost) || 0,
         category,
         isAvailable: true,
         imageUrl,
@@ -279,10 +284,14 @@ export default function MenuPage() {
               <Label>Descripción</Label>
               <Textarea placeholder="Ingredientes, opciones, etc." value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
                 <Label>Precio ($) *</Label>
                 <Input type="number" step="0.01" min="0" placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Costo ($)</Label>
+                <Input type="number" step="0.01" min="0" placeholder="0.00" value={cost} onChange={(e) => setCost(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>Categoría</Label>

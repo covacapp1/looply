@@ -75,6 +75,7 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number;
+  cost: number;
   category: string;
   isAvailable: boolean;
   imageUrl: string;
@@ -120,6 +121,16 @@ export interface Sale {
   description: string;
   type: "order" | "manual";
   createdAt: Date;
+}
+
+export interface DailyRegister {
+  id: string;
+  merchantId: string;
+  openingAmount: number;
+  closingAmount: number | null;
+  status: "open" | "closed";
+  openedAt: Date;
+  closedAt: Date | null;
 }
 
 export type ViewMode = "grid" | "list";

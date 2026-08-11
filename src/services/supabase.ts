@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import type { LoyaltyReward, Customer, StampHistory, MenuItem, ShopCustomer, Order, Sale } from "@/types";
+import type { LoyaltyReward, Customer, StampHistory, MenuItem, ShopCustomer, Order, Sale, DailyRegister } from "@/types";
 
 // Rewards
 export async function getRewards(): Promise<LoyaltyReward[]> {
@@ -318,6 +318,7 @@ export async function getMenuItems(merchantId: string): Promise<MenuItem[]> {
     name: m.name,
     description: m.description || "",
     price: m.price,
+    cost: m.cost || 0,
     category: m.category || "General",
     isAvailable: m.is_available,
     imageUrl: m.image_url || "",
@@ -335,6 +336,7 @@ export async function createMenuItem(item: Omit<MenuItem, "id" | "createdAt">): 
       name: item.name,
       description: item.description,
       price: item.price,
+      cost: item.cost || 0,
       category: item.category,
       is_available: item.isAvailable,
       image_url: item.imageUrl || "",
@@ -353,6 +355,7 @@ export async function createMenuItem(item: Omit<MenuItem, "id" | "createdAt">): 
     name: data.name,
     description: data.description || "",
     price: data.price,
+    cost: data.cost || 0,
     category: data.category,
     isAvailable: data.is_available,
     imageUrl: data.image_url || "",
@@ -369,6 +372,7 @@ export async function updateMenuItem(id: string, updates: Partial<MenuItem>): Pr
       name: updates.name,
       description: updates.description,
       price: updates.price,
+      cost: updates.cost,
       category: updates.category,
       is_available: updates.isAvailable,
       image_url: updates.imageUrl,
@@ -388,6 +392,7 @@ export async function updateMenuItem(id: string, updates: Partial<MenuItem>): Pr
     name: data.name,
     description: data.description || "",
     price: data.price,
+    cost: data.cost || 0,
     category: data.category,
     isAvailable: data.is_available,
     imageUrl: data.image_url || "",
@@ -626,4 +631,96 @@ export async function createSale(sale: {
     type: data.type,
     createdAt: new Date(data.created_at),
   };
+}
+
+// ========== DAILY REGISTERS ==========
+export async function getOpenRegister(merchantId: string): Promise<DailyRegister | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+
+  const { data, error } = await supabase
+    .from("daily_registers")
+    .select("*")
+    .eq("merchant_id", merchantId)
+    .eq("status", "open")
+    .order("opened_at", { ascending: false })
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return {
+    id: data.id,
+    merchantId: data.merchant_id,
+    openingAmount: data.opening_amount,
+    closingAmount: data.closing_amount,
+    status: data.status,
+    openedAt: new Date(data.opened_at),
+    closedAt: data.closed_at ? new Date(data.closed_at) : null,
+  };
+}
+
+export async function openRegister(merchantId: string, openingAmount: number): Promise<DailyRegister | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+
+  const { data, error } = await supabase
+    .from("daily_registers")
+    .insert({
+      merchant_id: merchantId,
+      opening_amount: openingAmount,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error opening register:", error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    merchantId: data.merchant_id,
+    openingAmount: data.opening_amount,
+    closingAmount: data.closing_amount,
+    status: data.status,
+    openedAt: new Date(data.opened_at),
+    closedAt: data.closed_at ? new Date(data.closed_at) : null,
+  };
+}
+
+export async function closeRegister(registerId: string, closingAmount: number): Promise<boolean> {
+  if (!isSupabaseConfigured() || !supabase) return false;
+
+  const { error } = await supabase
+    .from("daily_registers")
+    .update({
+      closing_amount: closingAmount,
+      status: "closed",
+      closed_at: new Date().toISOString(),
+    })
+    .eq("id", registerId);
+
+  return !error;
+}
+
+export async function getClosedRegisters(merchantId: string, limit = 30): Promise<DailyRegister[]> {
+  if (!isSupabaseConfigured() || !supabase) return [];
+
+  const { data, error } = await supabase
+    .from("daily_registers")
+    .select("*")
+    .eq("merchant_id", merchantId)
+    .eq("status", "closed")
+    .order("closed_at", { ascending: false })
+    .limit(limit);
+
+  if (error) return [];
+
+  return data.map((r) => ({
+    id: r.id,
+    merchantId: r.merchant_id,
+    openingAmount: r.opening_amount,
+    closingAmount: r.closing_amount,
+    status: r.status,
+    openedAt: new Date(r.opened_at),
+    closedAt: r.closed_at ? new Date(r.closed_at) : null,
+  }));
 }
