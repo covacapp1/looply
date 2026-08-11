@@ -333,6 +333,13 @@ export default function ShopPage() {
                     return (
                       <Card key={item.id} className="border-border">
                         <CardContent className="p-4 flex items-center gap-3">
+                          {item.imageUrl ? (
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className="h-16 w-16 rounded-lg object-cover flex-shrink-0"
+                            />
+                          ) : null}
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-foreground truncate">{item.name}</p>
                             {item.description && (

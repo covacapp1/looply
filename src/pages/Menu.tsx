@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UtensilsCrossed, PlusCircle, Trash2, Eye, EyeOff } from "lucide-react";
+import { UtensilsCrossed, PlusCircle, Trash2, Eye, EyeOff, Camera, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 import { getMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from "@/services/supabase";
 import type { MenuItem } from "@/types";
 import { toast } from "sonner";
@@ -21,12 +22,14 @@ export default function MenuPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   // Form
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("General");
+  const [imageUrl, setImageUrl] = useState("");
   const [saving, setSaving] = useState(false);
 
   const loadItems = useCallback(async () => {
@@ -46,6 +49,7 @@ export default function MenuPage() {
     setDescription("");
     setPrice("");
     setCategory("General");
+    setImageUrl("");
     setDialogOpen(true);
   }
 
@@ -55,7 +59,35 @@ export default function MenuPage() {
     setDescription(item.description);
     setPrice(item.price.toString());
     setCategory(item.category);
+    setImageUrl(item.imageUrl || "");
     setDialogOpen(true);
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploading(true);
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+    const { error } = await supabase.storage
+      .from("menu-images")
+      .upload(fileName, file);
+
+    if (error) {
+      console.error("Error uploading image:", error);
+      toast.error("Error al subir imagen");
+      setUploading(false);
+      return;
+    }
+
+    const { data } = supabase.storage
+      .from("menu-images")
+      .getPublicUrl(fileName);
+
+    setImageUrl(data.publicUrl);
+    setUploading(false);
   }
 
   async function handleSave() {
@@ -69,6 +101,7 @@ export default function MenuPage() {
         price: parseFloat(price),
         category,
         isAvailable: editingItem.isAvailable,
+        imageUrl,
       });
       if (updated) {
         setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
@@ -82,6 +115,7 @@ export default function MenuPage() {
         price: parseFloat(price),
         category,
         isAvailable: true,
+        imageUrl,
       });
       if (created) {
         setItems((prev) => [...prev, created]);
@@ -155,6 +189,17 @@ export default function MenuPage() {
                   .map((item) => (
                     <Card key={item.id} className={`border-border ${!item.isAvailable ? "opacity-50" : ""}`}>
                       <CardContent className="p-3 flex items-center gap-3">
+                        {item.imageUrl ? (
+                          <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="h-14 w-14 rounded-lg object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="h-14 w-14 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                            <UtensilsCrossed className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-foreground truncate">{item.name}</p>
@@ -194,6 +239,38 @@ export default function MenuPage() {
             <DialogTitle>{editingItem ? "Editar Producto" : "Agregar Producto"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
+            {/* Image Upload */}
+            <div className="space-y-2">
+              <Label>Foto del producto</Label>
+              {imageUrl ? (
+                <div className="relative">
+                  <img src={imageUrl} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="absolute top-2 right-2 h-7 w-7 p-0"
+                    onClick={() => setImageUrl("")}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                  <Camera className="h-8 w-8 text-muted-foreground mb-2" />
+                  <span className="text-sm text-muted-foreground">
+                    {uploading ? "Subiendo..." : "Elegir foto"}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                    disabled={uploading}
+                  />
+                </label>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label>Nombre *</Label>
               <Input placeholder="Ej: Hamburguesa Clásica" value={name} onChange={(e) => setName(e.target.value)} />

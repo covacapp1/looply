@@ -320,6 +320,7 @@ export async function getMenuItems(merchantId: string): Promise<MenuItem[]> {
     price: m.price,
     category: m.category || "General",
     isAvailable: m.is_available,
+    imageUrl: m.image_url || "",
     createdAt: new Date(m.created_at),
   }));
 }
@@ -336,6 +337,7 @@ export async function createMenuItem(item: Omit<MenuItem, "id" | "createdAt">): 
       price: item.price,
       category: item.category,
       is_available: item.isAvailable,
+      image_url: item.imageUrl || "",
     })
     .select()
     .single();
@@ -353,6 +355,7 @@ export async function createMenuItem(item: Omit<MenuItem, "id" | "createdAt">): 
     price: data.price,
     category: data.category,
     isAvailable: data.is_available,
+    imageUrl: data.image_url || "",
     createdAt: new Date(data.created_at),
   };
 }
@@ -368,6 +371,7 @@ export async function updateMenuItem(id: string, updates: Partial<MenuItem>): Pr
       price: updates.price,
       category: updates.category,
       is_available: updates.isAvailable,
+      image_url: updates.imageUrl,
     })
     .eq("id", id)
     .select()
@@ -386,6 +390,7 @@ export async function updateMenuItem(id: string, updates: Partial<MenuItem>): Pr
     price: data.price,
     category: data.category,
     isAvailable: data.is_available,
+    imageUrl: data.image_url || "",
     createdAt: new Date(data.created_at),
   };
 }
