@@ -2,10 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
-import { Contact, Phone, MapPin, StickyNote } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Contact, Phone, MapPin, StickyNote, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getShopCustomers } from "@/services/supabase";
+import { supabase } from "@/lib/supabase";
 import type { ShopCustomer } from "@/types";
+import { toast } from "sonner";
 
 export default function CustomersPage() {
   const { user } = useAuth();
@@ -22,6 +25,15 @@ export default function CustomersPage() {
   useEffect(() => {
     loadCustomers();
   }, [loadCustomers]);
+
+  async function handleDelete(id: string) {
+    if (!confirm("¿Eliminar este cliente?")) return;
+    const { error } = await supabase.from("shop_customers").delete().eq("id", id);
+    if (!error) {
+      setCustomers((prev) => prev.filter((c) => c.id !== id));
+      toast.success("Cliente eliminado");
+    }
+  }
 
   return (
     <div>
@@ -83,6 +95,14 @@ export default function CustomersPage() {
                         Registrado: {new Date(customer.createdAt).toLocaleDateString("es-AR")}
                       </p>
                     </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-destructive hover:text-destructive flex-shrink-0"
+                      onClick={() => handleDelete(customer.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
