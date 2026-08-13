@@ -162,7 +162,7 @@ export default function SettingsPage() {
                     </p>
                   </div>
                   <Button variant="outline" className="w-full mt-3" size="sm">
-                    Vincular Mercado Pago
+                    Pagar Mercado Pago
                   </Button>
                 </div>
 
@@ -186,7 +186,7 @@ export default function SettingsPage() {
                     </p>
                   </div>
                   <Button variant="outline" className="w-full mt-3" size="sm">
-                    Vincular PayPal
+                    Pagar PayPal
                   </Button>
                 </div>
               </div>
