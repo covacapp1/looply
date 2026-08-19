@@ -30,6 +30,8 @@ import {
   addStamp,
   getBusinessStats,
 } from "@/services/supabase";
+import { generateStampCardImage } from "@/components/loyalty/StampCardImageGenerator";
+import { uploadStampCardImage, ensureBucketExists } from "@/services/imageService";
 import type { LoyaltyReward, Customer, StampHistory } from "@/types";
 import {
   Plus,
@@ -147,9 +149,36 @@ export default function LoyaltyPage() {
       }
       loadData();
 
-      // Auto-open WhatsApp with the message
+      let imageUrl: string | null = null;
+
+      try {
+        await ensureBucketExists();
+
+        const imageBlob = await generateStampCardImage({
+          businessName: result.businessName,
+          businessLogo: result.businessLogo,
+          customerName: `${customer.firstName} ${customer.lastName}`,
+          rewardName: result.rewardName,
+          rewardDescription: result.rewardDescription,
+          stampAction: result.stampAction,
+          stampsRequired: result.customer.stamps,
+          currentStamps: result.customer.stamps,
+          isCompleted: result.customer.isCompleted,
+        });
+
+        imageUrl = await uploadStampCardImage(customer.id, imageBlob);
+      } catch (error) {
+        console.error("Error generando imagen:", error);
+      }
+
       const phone = `${customer.countryCode?.replace("+", "")}${customer.phone}`;
-      const message = encodeURIComponent(result.history?.message || "");
+      let whatsappMessage = result.history?.message || "";
+
+      if (imageUrl) {
+        whatsappMessage += `\n\nVer tu tarjeta: ${imageUrl}`;
+      }
+
+      const message = encodeURIComponent(whatsappMessage);
       window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
     }
   }

@@ -56,3 +56,22 @@ CREATE INDEX idx_customers_loyalty_reward ON customers(loyalty_reward_id);
 CREATE INDEX idx_customers_business ON customers(business_id);
 CREATE INDEX idx_loyalty_rewards_business ON loyalty_rewards(business_id);
 CREATE INDEX idx_stamp_history_customer ON stamp_history(customer_id);
+
+-- Bucket de Storage para imágenes de tarjetas de fidelidad
+-- Ejecutar esto en el SQL Editor de Supabase o crear el bucket manualmente desde Storage
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('stamp-cards', 'stamp-cards', true, 5242880, ARRAY['image/png', 'image/jpeg', 'image/webp'])
+ON CONFLICT (id) DO NOTHING;
+
+-- Políticas de Storage para el bucket stamp-cards
+CREATE POLICY "Allow public read access" ON storage.objects
+  FOR SELECT USING (bucket_id = 'stamp-cards');
+
+CREATE POLICY "Allow authenticated insert" ON storage.objects
+  FOR INSERT WITH CHECK (bucket_id = 'stamp-cards');
+
+CREATE POLICY "Allow authenticated update" ON storage.objects
+  FOR UPDATE USING (bucket_id = 'stamp-cards');
+
+CREATE POLICY "Allow authenticated delete" ON storage.objects
+  FOR DELETE USING (bucket_id = 'stamp-cards');

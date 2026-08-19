@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,10 +7,69 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { CreditCard, Globe, DollarSign } from "lucide-react";
+import { CreditCard, Globe, DollarSign, Bell, BellOff, BellRing, Loader2, AlertCircle, Download, Smartphone, CheckCircle2 } from "lucide-react";
+import { isPushSupported, getPermissionState, subscribePush, unsubscribePush, isSubscribed, getSWRegistration } from "@/services/push";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("business");
+
+  // Push notifications state
+  const [pushSupported, setPushSupported] = useState(true);
+  const [permissionState, setPermissionState] = useState<NotificationPermission | "unsupported">("default");
+  const [subscribed, setSubscribed] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+
+  useEffect(() => {
+    checkPushState();
+  }, []);
+
+  async function checkPushState() {
+    const supported = isPushSupported();
+    setPushSupported(supported);
+    if (!supported) return;
+
+    const perm = await getPermissionState();
+    setPermissionState(perm);
+
+    const sub = await isSubscribed();
+    setSubscribed(sub);
+
+    // Register SW on load
+    await getSWRegistration();
+  }
+
+  async function handleEnablePush() {
+    setPushLoading(true);
+    const ok = await subscribePush();
+    if (ok) {
+      toast.success("Notificaciones activadas");
+      setSubscribed(true);
+      setPermissionState("granted");
+    } else {
+      toast.error("No se pudieron activar las notificaciones");
+    }
+    setPushLoading(false);
+  }
+
+  async function handleDisablePush() {
+    setPushLoading(true);
+    const ok = await unsubscribePush();
+    if (ok) {
+      toast.success("Notificaciones desactivadas");
+      setSubscribed(false);
+    }
+    setPushLoading(false);
+  }
+
+  function getPushStatusMessage() {
+    if (!pushSupported) return "Tu navegador no soporta notificaciones push";
+    if (permissionState === "denied") return "Los permisos de notificación fueron bloqueados. Habilitalos desde la configuración del navegador.";
+    if (permissionState === "unsupported") return "Notificaciones no disponibles";
+    return null;
+  }
+
+  const pushMessage = getPushStatusMessage();
 
   return (
     <div>
@@ -23,6 +82,7 @@ export default function SettingsPage() {
         <TabsList className="bg-muted">
           <TabsTrigger value="business">Negocio</TabsTrigger>
           <TabsTrigger value="subscription">Suscripción</TabsTrigger>
+          <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
         </TabsList>
 
         <TabsContent value="business" className="space-y-6">
@@ -129,6 +189,7 @@ export default function SettingsPage() {
                   <p>✓ Clientes ilimitados</p>
                   <p>✓ Menú digital</p>
                   <p>✓ Notificaciones WhatsApp</p>
+                  <p>✓ Notificaciones Push</p>
                   <p>✓ Reportes y estadísticas</p>
                 </div>
               </div>
@@ -189,6 +250,159 @@ export default function SettingsPage() {
                     Pagar PayPal
                   </Button>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notifications" className="space-y-6">
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Notificaciones Push
+              </CardTitle>
+              <CardDescription>
+                Recibí novedades, promociones y avisos importantes directamente en tu celular
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {pushMessage ? (
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-50 border border-amber-200">
+                  <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <p className="text-sm text-amber-800">{pushMessage}</p>
+                </div>
+              ) : subscribed ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-emerald-50 border border-emerald-200">
+                    <BellRing className="h-5 w-5 text-emerald-600" />
+                    <div>
+                      <p className="text-sm font-medium text-emerald-800">Notificaciones activadas</p>
+                      <p className="text-xs text-emerald-600">Vas a recibir notificaciones push en este dispositivo</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleDisablePush}
+                    disabled={pushLoading}
+                    className="w-full"
+                  >
+                    {pushLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <BellOff className="h-4 w-4 mr-2" />
+                    )}
+                    Desactivar notificaciones
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-muted">
+                    <Bell className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Notificaciones desactivadas</p>
+                      <p className="text-xs text-muted-foreground">Activatelas para recibir novedades</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleEnablePush}
+                    disabled={pushLoading}
+                    className="w-full"
+                  >
+                    {pushLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Bell className="h-4 w-4 mr-2" />
+                    )}
+                    Activar notificaciones
+                  </Button>
+                </div>
+              )}
+
+              {permissionState === "denied" && (
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <p>Para reactivar las notificaciones:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-xs">
+                    <li>Hacé clic en el ícono de candado en la barra de direcciones</li>
+                    <li>Buscá "Notificaciones" y cambialo a "Permitir"</li>
+                    <li>Recargá la página</li>
+                  </ol>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Download className="h-5 w-5" />
+                Instalar LOOPLY como app
+              </CardTitle>
+              <CardDescription>
+                Instalá LOOPLY en tu celular para una experiencia como app nativa
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg bg-muted/50 p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <Smartphone className="h-5 w-5 text-primary mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">¿Por qué instalarla?</p>
+                    <p className="text-xs text-muted-foreground">
+                      Al instalarla como app, aparece en tu pantalla de inicio y las notificaciones funcionan igual que una app nativa.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-foreground">En Android (Chrome):</p>
+                <ol className="list-decimal list-inside space-y-2 text-xs text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                    <span>Abrí LOOPLY en Chrome</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                    <span>Tocá los 3 puntos (menú) arriba a la derecha</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                    <span>Seleccioná "Agregar a pantalla de inicio"</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                    <span>Confirmá tocando "Agregar"</span>
+                  </li>
+                </ol>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-foreground">En iPhone (Safari):</p>
+                <ol className="list-decimal list-inside space-y-2 text-xs text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                    <span>Abrí LOOPLY en Safari</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                    <span>Tocá el ícono de compartir (cuadrado con flecha)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                    <span>Deslizá y seleccioná "Agregar a pantalla de inicio"</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                    <span>Tocá "Agregar" arriba a la derecha</span>
+                  </li>
+                </ol>
+              </div>
+
+              <div className="rounded-lg bg-primary/5 border border-primary/20 p-3">
+                <p className="text-xs text-muted-foreground">
+                  <strong className="text-foreground">Tip:</strong> Después de instalarla, abrí la app desde el ícono en tu pantalla de inicio y activá las notificaciones una sola vez.
+                </p>
               </div>
             </CardContent>
           </Card>

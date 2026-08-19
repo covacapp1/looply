@@ -191,8 +191,28 @@ export async function createCustomer(customer: {
 }
 
 // Stamps
-export async function addStamp(customerId: string): Promise<{ customer: Customer | null; history: StampHistory | null }> {
-  if (!isSupabaseConfigured() || !supabase) return { customer: null, history: null };
+export interface AddStampResult {
+  customer: Customer | null;
+  history: StampHistory | null;
+  businessName: string;
+  businessLogo: string;
+  rewardName: string;
+  rewardDescription: string;
+  stampAction: string;
+}
+
+export async function addStamp(customerId: string): Promise<AddStampResult> {
+  const emptyResult: AddStampResult = {
+    customer: null,
+    history: null,
+    businessName: "",
+    businessLogo: "",
+    rewardName: "",
+    rewardDescription: "",
+    stampAction: "",
+  };
+
+  if (!isSupabaseConfigured() || !supabase) return emptyResult;
 
   const { data: customerData, error: customerError } = await supabase
     .from("customers")
@@ -201,14 +221,14 @@ export async function addStamp(customerId: string): Promise<{ customer: Customer
     .single();
 
   if (customerError || !customerData) {
-    return { customer: null, history: null };
+    return emptyResult;
   }
 
   const newStamps = customerData.stamps + 1;
 
   const { data: rewardData } = await supabase
     .from("loyalty_rewards")
-    .select("stamps_required, name")
+    .select("stamps_required, name, description, stamp_action")
     .eq("id", customerData.loyalty_reward_id)
     .single();
 
@@ -227,7 +247,7 @@ export async function addStamp(customerId: string): Promise<{ customer: Customer
 
   if (updateError) {
     console.error("Error updating stamps:", updateError);
-    return { customer: null, history: null };
+    return emptyResult;
   }
 
   const message = isCompleted
@@ -250,6 +270,8 @@ export async function addStamp(customerId: string): Promise<{ customer: Customer
   if (historyError) {
     console.error("Error creating history:", historyError);
   }
+
+  const businessSettings = JSON.parse(localStorage.getItem("businessSettings") || "{}");
 
   return {
     customer: {
@@ -275,6 +297,11 @@ export async function addStamp(customerId: string): Promise<{ customer: Customer
       sent: historyData.sent,
       timestamp: new Date(historyData.timestamp),
     } : null,
+    businessName: businessSettings.name || "Mi Negocio",
+    businessLogo: businessSettings.logo || "",
+    rewardName: rewardData?.name || "",
+    rewardDescription: rewardData?.description || "",
+    stampAction: rewardData?.stamp_action || "",
   };
 }
 
