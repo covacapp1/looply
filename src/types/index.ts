@@ -69,6 +69,11 @@ export interface Activity {
   timestamp: Date;
 }
 
+export interface ProductVariant {
+  name: string;
+  options: string[];
+}
+
 export interface MenuItem {
   id: string;
   merchantId: string;
@@ -79,6 +84,7 @@ export interface MenuItem {
   category: string;
   isAvailable: boolean;
   imageUrl: string;
+  variants: ProductVariant[];
   createdAt: Date;
 }
 

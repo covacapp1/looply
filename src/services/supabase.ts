@@ -370,6 +370,7 @@ export async function getMenuItems(merchantId: string): Promise<MenuItem[]> {
     category: m.category || "General",
     isAvailable: m.is_available,
     imageUrl: m.image_url || "",
+    variants: m.variants || [],
     createdAt: new Date(m.created_at),
   }));
 }
@@ -388,6 +389,7 @@ export async function createMenuItem(item: Omit<MenuItem, "id" | "createdAt">): 
       category: item.category,
       is_available: item.isAvailable,
       image_url: item.imageUrl || "",
+      variants: item.variants || [],
     })
     .select()
     .single();
@@ -407,6 +409,7 @@ export async function createMenuItem(item: Omit<MenuItem, "id" | "createdAt">): 
     category: data.category,
     isAvailable: data.is_available,
     imageUrl: data.image_url || "",
+    variants: data.variants || [],
     createdAt: new Date(data.created_at),
   };
 }
@@ -424,6 +427,7 @@ export async function updateMenuItem(id: string, updates: Partial<MenuItem>): Pr
       category: updates.category,
       is_available: updates.isAvailable,
       image_url: updates.imageUrl,
+      variants: updates.variants,
     })
     .eq("id", id)
     .select()
@@ -444,6 +448,7 @@ export async function updateMenuItem(id: string, updates: Partial<MenuItem>): Pr
     category: data.category,
     isAvailable: data.is_available,
     imageUrl: data.image_url || "",
+    variants: data.variants || [],
     createdAt: new Date(data.created_at),
   };
 }

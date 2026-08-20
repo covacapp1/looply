@@ -9,11 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UtensilsCrossed, PlusCircle, Trash2, Eye, EyeOff, Camera, X, Tag } from "lucide-react";
+import { UtensilsCrossed, PlusCircle, Trash2, Eye, EyeOff, Camera, X, Tag, ListPlus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { getMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from "@/services/supabase";
-import type { MenuItem } from "@/types";
+import type { MenuItem, ProductVariant } from "@/types";
 import { toast } from "sonner";
 
 const DEFAULT_CATEGORIES = ["General", "Entradas", "Platos", "Bebidas", "Postres", "Otros"];
@@ -54,6 +54,13 @@ export default function MenuPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Variants
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [variantDialogOpen, setVariantDialogOpen] = useState(false);
+  const [newVariantName, setNewVariantName] = useState("");
+  const [newVariantOptions, setNewVariantOptions] = useState("");
+  const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
+
   // New category
   const [newCatName, setNewCatName] = useState("");
 
@@ -77,6 +84,7 @@ export default function MenuPage() {
     setCost("");
     setCategory(categories[0] || "General");
     setImageUrl("");
+    setVariants([]);
     setDialogOpen(true);
   }
 
@@ -88,6 +96,7 @@ export default function MenuPage() {
     setCost(item.cost.toString());
     setCategory(item.category);
     setImageUrl(item.imageUrl || "");
+    setVariants(item.variants || []);
     setDialogOpen(true);
   }
 
@@ -131,6 +140,7 @@ export default function MenuPage() {
         category,
         isAvailable: editingItem.isAvailable,
         imageUrl,
+        variants,
       });
       if (updated) {
         setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
@@ -146,6 +156,7 @@ export default function MenuPage() {
         category,
         isAvailable: true,
         imageUrl,
+        variants,
       });
       if (created) {
         setItems((prev) => [...prev, created]);
@@ -198,6 +209,46 @@ export default function MenuPage() {
     setCategories(updated);
     saveCategories(user.id, updated);
     toast.success("Categoría eliminada");
+  }
+
+  function openVariantDialog(editIndex: number | null = null) {
+    setEditingVariantIndex(editIndex);
+    if (editIndex !== null && variants[editIndex]) {
+      setNewVariantName(variants[editIndex].name);
+      setNewVariantOptions(variants[editIndex].options.join(", "));
+    } else {
+      setNewVariantName("");
+      setNewVariantOptions("");
+    }
+    setVariantDialogOpen(true);
+  }
+
+  function handleSaveVariant() {
+    if (!newVariantName.trim() || !newVariantOptions.trim()) {
+      toast.error("Completá nombre y opciones");
+      return;
+    }
+    const options = newVariantOptions.split(",").map((o) => o.trim()).filter(Boolean);
+    if (options.length < 2) {
+      toast.error("Agregá al menos 2 opciones separadas por coma");
+      return;
+    }
+    const newVariant: ProductVariant = { name: newVariantName.trim(), options };
+    if (editingVariantIndex !== null) {
+      const updated = [...variants];
+      updated[editingVariantIndex] = newVariant;
+      setVariants(updated);
+    } else {
+      setVariants([...variants, newVariant]);
+    }
+    setVariantDialogOpen(false);
+    setNewVariantName("");
+    setNewVariantOptions("");
+    setEditingVariantIndex(null);
+  }
+
+  function handleDeleteVariant(index: number) {
+    setVariants(variants.filter((_, i) => i !== index));
   }
 
   const itemsByCategory = categories.map((cat) => ({
@@ -372,6 +423,40 @@ export default function MenuPage() {
                 </Select>
               </div>
             </div>
+
+            {/* Variants */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Variantes (opcional)</Label>
+                <Button type="button" size="sm" variant="outline" onClick={() => openVariantDialog()}>
+                  <ListPlus className="h-3.5 w-3.5 mr-1" />
+                  Agregar
+                </Button>
+              </div>
+              {variants.length > 0 ? (
+                <div className="space-y-2">
+                  {variants.map((v, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                      <div>
+                        <p className="text-sm font-medium">{v.name}</p>
+                        <p className="text-xs text-muted-foreground">{v.options.join(", ")}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openVariantDialog(i)}>
+                          ✏️
+                        </Button>
+                        <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDeleteVariant(i)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Ej: Tamaño (Chico, Mediano, Grande)</p>
+              )}
+            </div>
+
             <Button className="w-full" onClick={handleSave} disabled={saving || !name.trim() || !price}>
               {saving ? "Guardando..." : editingItem ? "Guardar Cambios" : "Agregar Producto"}
             </Button>
@@ -419,6 +504,34 @@ export default function MenuPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Variant Dialog */}
+      <Dialog open={variantDialogOpen} onOpenChange={setVariantDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingVariantIndex !== null ? "Editar Variante" : "Agregar Variante"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label>Nombre de la variante *</Label>
+              <Input placeholder="Ej: Tamaño, Color, Sabor" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Opciones (separadas por coma) *</Label>
+              <Input placeholder="Ej: Chico, Mediano, Grande" value={newVariantOptions} onChange={(e) => setNewVariantOptions(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Mínimo 2 opciones</p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setVariantDialogOpen(false)} className="flex-1">
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveVariant} className="flex-1">
+                {editingVariantIndex !== null ? "Guardar" : "Agregar"}
+              </Button>
             </div>
           </div>
         </DialogContent>
