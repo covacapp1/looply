@@ -75,7 +75,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 );
               })}
               <div className="mx-5 my-2 border-t border-border" />
-              {adminItems.map((item) => {
+              {profile?.role === "admin" && adminItems.map((item) => {
                 const isActive = location.pathname === item.href;
                 return (
                   <Link

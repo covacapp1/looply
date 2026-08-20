@@ -36,6 +36,24 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, profile, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user || profile?.role !== "admin") {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
@@ -91,7 +109,14 @@ export default function App() {
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/caja" element={<CajaPage />} />
               <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/admin" element={<AdminPage />} />
+              <Route
+                path="/admin"
+                element={
+                  <AdminRoute>
+                    <AdminPage />
+                  </AdminRoute>
+                }
+              />
             </Route>
           </Routes>
         </BrowserRouter>
