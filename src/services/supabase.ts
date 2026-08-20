@@ -199,6 +199,7 @@ export interface AddStampResult {
   rewardName: string;
   rewardDescription: string;
   stampAction: string;
+  stampsRequired: number;
 }
 
 export async function addStamp(customerId: string): Promise<AddStampResult> {
@@ -210,6 +211,7 @@ export async function addStamp(customerId: string): Promise<AddStampResult> {
     rewardName: "",
     rewardDescription: "",
     stampAction: "",
+    stampsRequired: 0,
   };
 
   if (!isSupabaseConfigured() || !supabase) return emptyResult;
@@ -250,9 +252,12 @@ export async function addStamp(customerId: string): Promise<AddStampResult> {
     return emptyResult;
   }
 
+  const businessSettings = JSON.parse(localStorage.getItem("businessSettings") || "{}");
+  const businessName = businessSettings.name || "Tu negocio";
+
   const message = isCompleted
-    ? `🎉 ¡Felicitaciones! Ya puedes canjear tu premio: ${rewardData?.name}`
-    : `Gracias por elegir ${rewardData?.name}. Tu tarjeta tiene ${newStamps} de ${rewardData?.stamps_required} sellos`;
+    ? `🎉 ¡Felicitaciones de ${businessName}! Ya puedes canjear tu premio: ${rewardData?.name}`
+    : `Gracias por elegir ${businessName}. Tu tarjeta de ${rewardData?.name} tiene ${newStamps} de ${rewardData?.stamps_required} sellos`;
 
   const { data: historyData, error: historyError } = await supabase
     .from("stamp_history")
@@ -302,6 +307,7 @@ export async function addStamp(customerId: string): Promise<AddStampResult> {
     rewardName: rewardData?.name || "",
     rewardDescription: rewardData?.description || "",
     stampAction: rewardData?.stamp_action || "",
+    stampsRequired: rewardData?.stamps_required || 0,
   };
 }
 

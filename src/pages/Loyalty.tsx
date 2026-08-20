@@ -161,7 +161,7 @@ export default function LoyaltyPage() {
           rewardName: result.rewardName,
           rewardDescription: result.rewardDescription,
           stampAction: result.stampAction,
-          stampsRequired: result.customer.stamps,
+          stampsRequired: result.stampsRequired,
           currentStamps: result.customer.stamps,
           isCompleted: result.customer.isCompleted,
         });
