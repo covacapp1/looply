@@ -32,6 +32,7 @@ import {
 } from "@/services/supabase";
 import { generateStampCardImage } from "@/components/loyalty/StampCardImageGenerator";
 import { uploadStampCardImage, ensureBucketExists } from "@/services/imageService";
+import { useAuth } from "@/contexts/AuthContext";
 import type { LoyaltyReward, Customer, StampHistory } from "@/types";
 import {
   Plus,
@@ -50,6 +51,7 @@ import {
 import { toast } from "sonner";
 
 export default function LoyaltyPage() {
+  const { user } = useAuth();
   const [rewards, setRewards] = useState<LoyaltyReward[]>([]);
   const [customers, setCustomers] = useState<Record<string, Customer[]>>({});
   const [stats, setStats] = useState({ totalRewards: 0, totalCustomers: 0, totalStamps: 0, completedCards: 0 });
@@ -140,7 +142,7 @@ export default function LoyaltyPage() {
   }
 
   async function handleAddStamp(customer: Customer) {
-    const result = await addStamp(customer.id);
+    const result = await addStamp(customer.id, user?.id);
 
     if (result.customer) {
       setSelectedCustomer(result.customer);

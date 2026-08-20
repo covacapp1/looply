@@ -202,7 +202,7 @@ export interface AddStampResult {
   stampsRequired: number;
 }
 
-export async function addStamp(customerId: string): Promise<AddStampResult> {
+export async function addStamp(customerId: string, userId?: string): Promise<AddStampResult> {
   const emptyResult: AddStampResult = {
     customer: null,
     history: null,
@@ -252,8 +252,25 @@ export async function addStamp(customerId: string): Promise<AddStampResult> {
     return emptyResult;
   }
 
-  const businessSettings = JSON.parse(localStorage.getItem("businessSettings") || "{}");
-  const businessName = businessSettings.name || "Tu negocio";
+  let businessName = "Tu negocio";
+  let businessLogo = "";
+
+  if (userId) {
+    const { data: settingsData } = await supabase
+      .from("business_settings")
+      .select("name, logo")
+      .eq("user_id", userId)
+      .single();
+    
+    if (settingsData) {
+      businessName = settingsData.name || "Tu negocio";
+      businessLogo = settingsData.logo || "";
+    }
+  } else {
+    const local = JSON.parse(localStorage.getItem("businessSettings") || "{}");
+    businessName = local.name || "Tu negocio";
+    businessLogo = local.logo || "";
+  }
 
   const message = isCompleted
     ? `🎉 ¡Felicitaciones de ${businessName}! Ya puedes canjear tu premio: ${rewardData?.name}`
@@ -300,8 +317,8 @@ export async function addStamp(customerId: string): Promise<AddStampResult> {
       sent: historyData.sent,
       timestamp: new Date(historyData.timestamp),
     } : null,
-    businessName: businessSettings.name || "Mi Negocio",
-    businessLogo: businessSettings.logo || "",
+    businessName,
+    businessLogo,
     rewardName: rewardData?.name || "",
     rewardDescription: rewardData?.description || "",
     stampAction: rewardData?.stamp_action || "",
