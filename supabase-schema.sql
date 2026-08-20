@@ -75,3 +75,36 @@ CREATE POLICY "Allow authenticated update" ON storage.objects
 
 CREATE POLICY "Allow authenticated delete" ON storage.objects
   FOR DELETE USING (bucket_id = 'stamp-cards');
+
+-- Tabla de configuración del negocio
+CREATE TABLE business_settings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+  name TEXT NOT NULL DEFAULT '',
+  slug TEXT DEFAULT '',
+  description TEXT DEFAULT '',
+  phone TEXT DEFAULT '',
+  email TEXT DEFAULT '',
+  address TEXT DEFAULT '',
+  city TEXT DEFAULT '',
+  country TEXT DEFAULT '',
+  website TEXT DEFAULT '',
+  instagram TEXT DEFAULT '',
+  facebook TEXT DEFAULT '',
+  whatsapp TEXT DEFAULT '',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Habilitar RLS
+ALTER TABLE business_settings ENABLE ROW LEVEL SECURITY;
+
+-- Políticas
+CREATE POLICY "Users can read own settings" ON business_settings
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own settings" ON business_settings
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own settings" ON business_settings
+  FOR UPDATE USING (auth.uid() = user_id);

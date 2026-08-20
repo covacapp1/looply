@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
+import { saveBusinessSettings } from "@/services/supabase";
 import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
@@ -35,7 +36,22 @@ export default function LoginPage() {
     if (result.error) {
       setError(result.error);
     } else {
-      localStorage.setItem("businessSettings", JSON.stringify({ name: signupForm.businessName }));
+      if (result.userId) {
+        await saveBusinessSettings(result.userId, {
+          name: signupForm.businessName,
+          slug: signupForm.businessName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
+          description: "",
+          phone: "",
+          email: signupForm.email,
+          address: "",
+          city: "",
+          country: "",
+          website: "",
+          instagram: "",
+          facebook: "",
+          whatsapp: "",
+        });
+      }
       setError("Revisa tu email para confirmar tu cuenta");
     }
     setLoading(false);

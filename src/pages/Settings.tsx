@@ -7,35 +7,63 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { CreditCard, Globe, DollarSign, Bell, BellOff, BellRing, Loader2, AlertCircle, Download, Smartphone, CheckCircle2 } from "lucide-react";
+import { CreditCard, Globe, DollarSign, Bell, BellOff, BellRing, Loader2, AlertCircle, Download, Smartphone, CheckCircle2, Save } from "lucide-react";
 import { isPushSupported, getPermissionState, subscribePush, unsubscribePush, isSubscribed, getSWRegistration } from "@/services/push";
+import { getBusinessSettings, saveBusinessSettings, type BusinessSettings } from "@/services/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("business");
+const defaultSettings: BusinessSettings = {
+  name: "", slug: "", description: "", phone: "", email: "",
+  address: "", city: "", country: "", website: "",
+  instagram: "", facebook: "", whatsapp: "",
+};
 
-  // Push notifications state
+export default function SettingsPage() {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("business");
+  const [settings, setSettings] = useState<BusinessSettings>(defaultSettings);
+  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [saving, setSaving] = useState(false);
+
   const [pushSupported, setPushSupported] = useState(true);
   const [permissionState, setPermissionState] = useState<NotificationPermission | "unsupported">("default");
   const [subscribed, setSubscribed] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
 
   useEffect(() => {
+    loadSettings();
     checkPushState();
-  }, []);
+  }, [user]);
+
+  async function loadSettings() {
+    if (!user) return;
+    setLoadingSettings(true);
+    const data = await getBusinessSettings(user.id);
+    setSettings(data);
+    setLoadingSettings(false);
+  }
+
+  async function handleSaveSettings() {
+    if (!user) return;
+    setSaving(true);
+    const ok = await saveBusinessSettings(user.id, settings);
+    setSaving(false);
+    if (ok) {
+      toast.success("Configuración guardada");
+    } else {
+      toast.error("Error al guardar");
+    }
+  }
 
   async function checkPushState() {
     const supported = isPushSupported();
     setPushSupported(supported);
     if (!supported) return;
-
     const perm = await getPermissionState();
     setPermissionState(perm);
-
     const sub = await isSubscribed();
     setSubscribed(sub);
-
-    // Register SW on load
     await getSWRegistration();
   }
 
@@ -71,6 +99,10 @@ export default function SettingsPage() {
 
   const pushMessage = getPushStatusMessage();
 
+  function updateSettings(field: keyof BusinessSettings, value: string) {
+    setSettings((prev) => ({ ...prev, [field]: value }));
+  }
+
   return (
     <div>
       <PageHeader
@@ -92,47 +124,56 @@ export default function SettingsPage() {
               <CardDescription>Actualiza los datos de tu negocio</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nombre del Negocio</Label>
-                  <Input id="name" placeholder="Ej: Mi Negocio" />
+              {loadingSettings ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="slug">URL / Slug</Label>
-                  <Input id="slug" placeholder="Ej: mi-negocio" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Descripción</Label>
-                <Textarea id="description" placeholder="Describe tu negocio..." rows={3} />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Teléfono</Label>
-                  <Input id="phone" placeholder="Ej: +54 11 1234 5678" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="Ej: hola@minegocio.com" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Dirección</Label>
-                <Input id="address" placeholder="Ej: Av. Principal 123" />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="city">Ciudad</Label>
-                  <Input id="city" placeholder="Ej: Buenos Aires" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="country">País</Label>
-                  <Input id="country" placeholder="Ej: Argentina" />
-                </div>
-              </div>
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-                Guardar Cambios
-              </Button>
+              ) : (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Nombre del Negocio</Label>
+                      <Input id="name" placeholder="Ej: Mi Negocio" value={settings.name} onChange={(e) => updateSettings("name", e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="slug">URL / Slug</Label>
+                      <Input id="slug" placeholder="Ej: mi-negocio" value={settings.slug} onChange={(e) => updateSettings("slug", e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Descripción</Label>
+                    <Textarea id="description" placeholder="Describe tu negocio..." rows={3} value={settings.description} onChange={(e) => updateSettings("description", e.target.value)} />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Teléfono</Label>
+                      <Input id="phone" placeholder="Ej: +54 11 1234 5678" value={settings.phone} onChange={(e) => updateSettings("phone", e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input id="email" type="email" placeholder="Ej: hola@minegocio.com" value={settings.email} onChange={(e) => updateSettings("email", e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Dirección</Label>
+                    <Input id="address" placeholder="Ej: Av. Principal 123" value={settings.address} onChange={(e) => updateSettings("address", e.target.value)} />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="city">Ciudad</Label>
+                      <Input id="city" placeholder="Ej: Buenos Aires" value={settings.city} onChange={(e) => updateSettings("city", e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="country">País</Label>
+                      <Input id="country" placeholder="Ej: Argentina" value={settings.country} onChange={(e) => updateSettings("country", e.target.value)} />
+                    </div>
+                  </div>
+                  <Button onClick={handleSaveSettings} disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                    Guardar Cambios
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -145,24 +186,25 @@ export default function SettingsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="website">Sitio Web</Label>
-                  <Input id="website" placeholder="Ej: https://minegocio.com" />
+                  <Input id="website" placeholder="Ej: https://minegocio.com" value={settings.website} onChange={(e) => updateSettings("website", e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="instagram">Instagram</Label>
-                  <Input id="instagram" placeholder="Ej: @minegocio" />
+                  <Input id="instagram" placeholder="Ej: @minegocio" value={settings.instagram} onChange={(e) => updateSettings("instagram", e.target.value)} />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="facebook">Facebook</Label>
-                  <Input id="facebook" placeholder="Ej: minegocio" />
+                  <Input id="facebook" placeholder="Ej: minegocio" value={settings.facebook} onChange={(e) => updateSettings("facebook", e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="whatsapp">WhatsApp</Label>
-                  <Input id="whatsapp" placeholder="Ej: +541112345678" />
+                  <Input id="whatsapp" placeholder="Ej: +541112345678" value={settings.whatsapp} onChange={(e) => updateSettings("whatsapp", e.target.value)} />
                 </div>
               </div>
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button onClick={handleSaveSettings} disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                 Guardar Cambios
               </Button>
             </CardContent>
@@ -281,17 +323,8 @@ export default function SettingsPage() {
                       <p className="text-xs text-emerald-600">Vas a recibir notificaciones push en este dispositivo</p>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    onClick={handleDisablePush}
-                    disabled={pushLoading}
-                    className="w-full"
-                  >
-                    {pushLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <BellOff className="h-4 w-4 mr-2" />
-                    )}
+                  <Button variant="outline" onClick={handleDisablePush} disabled={pushLoading} className="w-full">
+                    {pushLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <BellOff className="h-4 w-4 mr-2" />}
                     Desactivar notificaciones
                   </Button>
                 </div>
@@ -304,16 +337,8 @@ export default function SettingsPage() {
                       <p className="text-xs text-muted-foreground">Activatelas para recibir novedades</p>
                     </div>
                   </div>
-                  <Button
-                    onClick={handleEnablePush}
-                    disabled={pushLoading}
-                    className="w-full"
-                  >
-                    {pushLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Bell className="h-4 w-4 mr-2" />
-                    )}
+                  <Button onClick={handleEnablePush} disabled={pushLoading} className="w-full">
+                    {pushLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Bell className="h-4 w-4 mr-2" />}
                     Activar notificaciones
                   </Button>
                 </div>
@@ -394,7 +419,7 @@ export default function SettingsPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                    <span>Tocá "Agregar" arriba a la derecha</span>
+                    <span>Confirmá tocando "Agregar" arriba a la derecha</span>
                   </li>
                 </ol>
               </div>

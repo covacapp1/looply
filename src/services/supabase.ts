@@ -751,3 +751,105 @@ export async function getClosedRegisters(merchantId: string, limit = 30): Promis
     closedAt: r.closed_at ? new Date(r.closed_at) : null,
   }));
 }
+
+// ========== BUSINESS SETTINGS ==========
+
+export interface BusinessSettings {
+  name: string;
+  slug: string;
+  description: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  country: string;
+  website: string;
+  instagram: string;
+  facebook: string;
+  whatsapp: string;
+}
+
+const defaultSettings: BusinessSettings = {
+  name: "",
+  slug: "",
+  description: "",
+  phone: "",
+  email: "",
+  address: "",
+  city: "",
+  country: "",
+  website: "",
+  instagram: "",
+  facebook: "",
+  whatsapp: "",
+};
+
+export async function getBusinessSettings(userId: string): Promise<BusinessSettings> {
+  if (!isSupabaseConfigured() || !supabase) {
+    const local = localStorage.getItem("businessSettings");
+    return local ? { ...defaultSettings, ...JSON.parse(local) } : defaultSettings;
+  }
+
+  const { data, error } = await supabase
+    .from("business_settings")
+    .select("*")
+    .eq("user_id", userId)
+    .single();
+
+  if (error || !data) {
+    const local = localStorage.getItem("businessSettings");
+    return local ? { ...defaultSettings, ...JSON.parse(local) } : defaultSettings;
+  }
+
+  const settings: BusinessSettings = {
+    name: data.name || "",
+    slug: data.slug || "",
+    description: data.description || "",
+    phone: data.phone || "",
+    email: data.email || "",
+    address: data.address || "",
+    city: data.city || "",
+    country: data.country || "",
+    website: data.website || "",
+    instagram: data.instagram || "",
+    facebook: data.facebook || "",
+    whatsapp: data.whatsapp || "",
+  };
+
+  localStorage.setItem("businessSettings", JSON.stringify(settings));
+  return settings;
+}
+
+export async function saveBusinessSettings(userId: string, settings: BusinessSettings): Promise<boolean> {
+  if (!isSupabaseConfigured() || !supabase) {
+    localStorage.setItem("businessSettings", JSON.stringify(settings));
+    return true;
+  }
+
+  const { error } = await supabase
+    .from("business_settings")
+    .upsert({
+      user_id: userId,
+      name: settings.name,
+      slug: settings.slug,
+      description: settings.description,
+      phone: settings.phone,
+      email: settings.email,
+      address: settings.address,
+      city: settings.city,
+      country: settings.country,
+      website: settings.website,
+      instagram: settings.instagram,
+      facebook: settings.facebook,
+      whatsapp: settings.whatsapp,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "user_id" });
+
+  if (error) {
+    console.error("Error saving business settings:", error);
+    return false;
+  }
+
+  localStorage.setItem("businessSettings", JSON.stringify(settings));
+  return true;
+}
