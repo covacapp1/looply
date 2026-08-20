@@ -276,8 +276,6 @@ export async function addStamp(customerId: string): Promise<AddStampResult> {
     console.error("Error creating history:", historyError);
   }
 
-  const businessSettings = JSON.parse(localStorage.getItem("businessSettings") || "{}");
-
   return {
     customer: {
       id: updatedCustomer.id,
