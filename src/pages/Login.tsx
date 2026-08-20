@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
-  const [signupForm, setSignupForm] = useState({ email: "", password: "", fullName: "" });
+  const [signupForm, setSignupForm] = useState({ email: "", password: "", fullName: "", businessName: "" });
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -35,6 +35,7 @@ export default function LoginPage() {
     if (result.error) {
       setError(result.error);
     } else {
+      localStorage.setItem("businessSettings", JSON.stringify({ name: signupForm.businessName }));
       setError("Revisa tu email para confirmar tu cuenta");
     }
     setLoading(false);
@@ -99,6 +100,15 @@ export default function LoginPage() {
                       placeholder="Tu nombre"
                       value={signupForm.fullName}
                       onChange={(e) => setSignupForm({ ...signupForm, fullName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nombre del comercio</Label>
+                    <Input
+                      placeholder="Ej: Mi Negocio"
+                      value={signupForm.businessName}
+                      onChange={(e) => setSignupForm({ ...signupForm, businessName: e.target.value })}
                       required
                     />
                   </div>
