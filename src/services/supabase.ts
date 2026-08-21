@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import type { LoyaltyReward, Customer, StampHistory, MenuItem, ShopCustomer, Order, Sale, DailyRegister } from "@/types";
+import type { LoyaltyReward, Customer, StampHistory, MenuItem, ShopCustomer, Order, Sale, DailyRegister, CuentaCorriente } from "@/types";
 
 // Rewards
 export async function getRewards(): Promise<LoyaltyReward[]> {
@@ -898,4 +898,118 @@ export async function saveBusinessSettings(userId: string, settings: BusinessSet
 
   localStorage.setItem("businessSettings", JSON.stringify(settings));
   return true;
+}
+
+// Cuenta Corriente
+export async function createCuentaCorriente(entry: {
+  merchantId: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  orderId: string;
+  total: number;
+}): Promise<CuentaCorriente | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+
+  const { data, error } = await supabase
+    .from("cuenta_corriente")
+    .insert({
+      merchant_id: entry.merchantId,
+      customer_id: entry.customerId,
+      customer_name: entry.customerName,
+      customer_phone: entry.customerPhone,
+      order_id: entry.orderId,
+      total: entry.total,
+      paid: 0,
+      remaining: entry.total,
+      status: "pending",
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating cuenta corriente:", error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    merchantId: data.merchant_id,
+    customerId: data.customer_id,
+    customerName: data.customer_name,
+    customerPhone: data.customer_phone,
+    orderId: data.order_id,
+    total: data.total,
+    paid: data.paid,
+    remaining: data.remaining,
+    createdAt: new Date(data.created_at),
+    status: data.status,
+  };
+}
+
+export async function getCuentaCorriente(merchantId: string): Promise<CuentaCorriente[]> {
+  if (!isSupabaseConfigured() || !supabase) return [];
+
+  const { data, error } = await supabase
+    .from("cuenta_corriente")
+    .select("*")
+    .eq("merchant_id", merchantId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching cuenta corriente:", error);
+    return [];
+  }
+
+  return data.map((d) => ({
+    id: d.id,
+    merchantId: d.merchant_id,
+    customerId: d.customer_id,
+    customerName: d.customer_name,
+    customerPhone: d.customer_phone,
+    orderId: d.order_id,
+    total: d.total,
+    paid: d.paid,
+    remaining: d.remaining,
+    createdAt: new Date(d.created_at),
+    status: d.status,
+  }));
+}
+
+export async function payCuentaCorriente(id: string, amount: number): Promise<boolean> {
+  if (!isSupabaseConfigured() || !supabase) return false;
+
+  const { data: current, error: fetchError } = await supabase
+    .from("cuenta_corriente")
+    .select("paid, total")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !current) return false;
+
+  const newPaid = current.paid + amount;
+  const newRemaining = current.total - newPaid;
+  const newStatus = newRemaining <= 0 ? "paid" : "pending";
+
+  const { error } = await supabase
+    .from("cuenta_corriente")
+    .update({
+      paid: newPaid,
+      remaining: Math.max(0, newRemaining),
+      status: newStatus,
+    })
+    .eq("id", id);
+
+  return !error;
+}
+
+export async function deleteCuentaCorriente(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured() || !supabase) return false;
+
+  const { error } = await supabase
+    .from("cuenta_corriente")
+    .delete()
+    .eq("id", id);
+
+  return !error;
 }

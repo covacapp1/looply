@@ -10,6 +10,7 @@ const navItems = [
   { label: "Menú", href: "/" },
   { label: "Caja", href: "/caja" },
   { label: "Pedidos", href: "/orders" },
+  { label: "Cuenta Corriente", href: "/cuenta-corriente" },
   { label: "Tarjetas de Fidelidad", href: "/loyalty" },
   { label: "Menú Digital", href: "/menu" },
   { label: "Clientes", href: "/customers" },

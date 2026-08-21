@@ -140,6 +140,20 @@ export interface DailyRegister {
   closedAt: Date | null;
 }
 
+export interface CuentaCorriente {
+  id: string;
+  merchantId: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  orderId: string;
+  total: number;
+  paid: number;
+  remaining: number;
+  createdAt: Date;
+  status: "pending" | "paid";
+}
+
 export type ViewMode = "grid" | "list";
 
 export interface FilterOptions {

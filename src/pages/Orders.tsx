@@ -1,21 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardList, Clock, ChefHat, Truck, CheckCircle2, XCircle, Copy, ExternalLink } from "lucide-react";
+import { ClipboardList, Clock, CheckCircle2, XCircle, Copy, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getOrdersByMerchant, updateOrderStatus } from "@/services/supabase";
+import { getOrdersByMerchant, updateOrderStatus, createSale, createCuentaCorriente } from "@/services/supabase";
 import type { Order } from "@/types";
 import { toast } from "sonner";
 
 const STATUS_CONFIG = {
-  pending: { label: "Pendiente", icon: Clock, color: "bg-amber-100 text-amber-700", next: "preparing" as const, nextLabel: "Preparar" },
-  preparing: { label: "Preparando", icon: ChefHat, color: "bg-blue-100 text-blue-700", next: "sent" as const, nextLabel: "Enviar" },
-  sent: { label: "Enviado", icon: Truck, color: "bg-purple-100 text-purple-700", next: "delivered" as const, nextLabel: "Entregado" },
-  delivered: { label: "Entregado", icon: CheckCircle2, color: "bg-emerald-100 text-emerald-700", next: null, nextLabel: "" },
-  cancelled: { label: "Cancelado", icon: XCircle, color: "bg-red-100 text-red-700", next: null, nextLabel: "" },
+  pending: { label: "Pendiente", icon: Clock, color: "bg-amber-100 text-amber-700" },
+  confirmed: { label: "Confirmado", icon: CheckCircle2, color: "bg-emerald-100 text-emerald-700" },
+  cancelled: { label: "Cancelado", icon: XCircle, color: "bg-red-100 text-red-700" },
 };
 
 export default function OrdersPage() {
@@ -33,18 +31,63 @@ export default function OrdersPage() {
 
   useEffect(() => {
     loadOrders();
-    const interval = setInterval(loadOrders, 10000); // Poll every 10s
+    const interval = setInterval(loadOrders, 10000);
     return () => clearInterval(interval);
   }, [loadOrders]);
 
-  async function handleStatusChange(orderId: string, newStatus: Order["status"]) {
+  async function handleConfirm(order: Order) {
+    if (!user) return;
+    setUpdatingId(order.id);
+
+    const sale = await createSale({
+      merchantId: user.id,
+      orderId: order.id,
+      amount: order.total,
+      description: `Pedido de ${order.customerName || "Cliente"}`,
+      type: "order",
+    });
+
+    if (sale) {
+      await updateOrderStatus(order.id, "confirmed");
+      setOrders((prev) =>
+        prev.map((o) => (o.id === order.id ? { ...o, status: "confirmed" } : o))
+      );
+      toast.success("Pedido confirmado y venta registrada en caja");
+    }
+    setUpdatingId(null);
+  }
+
+  async function handlePendiente(order: Order) {
+    if (!user) return;
+    setUpdatingId(order.id);
+
+    const entry = await createCuentaCorriente({
+      merchantId: user.id,
+      customerId: order.customerId,
+      customerName: order.customerName || "Cliente",
+      customerPhone: order.customerPhone || "",
+      orderId: order.id,
+      total: order.total,
+    });
+
+    if (entry) {
+      await updateOrderStatus(order.id, "confirmed");
+      setOrders((prev) =>
+        prev.map((o) => (o.id === order.id ? { ...o, status: "confirmed" } : o))
+      );
+      toast.success("Agregado a cuenta corriente");
+    }
+    setUpdatingId(null);
+  }
+
+  async function handleCancel(orderId: string) {
     setUpdatingId(orderId);
-    const ok = await updateOrderStatus(orderId, newStatus);
+    const ok = await updateOrderStatus(orderId, "cancelled");
     if (ok) {
       setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+        prev.map((o) => (o.id === orderId ? { ...o, status: "cancelled" } : o))
       );
-      toast.success(`Pedido actualizado a "${STATUS_CONFIG[newStatus].label}"`);
+      toast.success("Pedido cancelado");
     }
     setUpdatingId(null);
   }
@@ -56,9 +99,9 @@ export default function OrdersPage() {
     toast.success("Link copiado al portapapeles");
   }
 
-  const pendingCount = orders.filter((o) => o.status === "pending").length;
-  const activeOrders = orders.filter((o) => !["delivered", "cancelled"].includes(o.status));
-  const completedOrders = orders.filter((o) => ["delivered", "cancelled"].includes(o.status));
+  const pendingOrders = orders.filter((o) => o.status === "pending");
+  const confirmedOrders = orders.filter((o) => o.status === "confirmed");
+  const cancelledOrders = orders.filter((o) => o.status === "cancelled");
 
   return (
     <div>
@@ -117,126 +160,153 @@ export default function OrdersPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Active Orders */}
-          {activeOrders.length > 0 && (
+          {/* Pending Orders */}
+          {pendingOrders.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                Activos ({activeOrders.length})
+                Pendientes ({pendingOrders.length})
               </h2>
               <div className="space-y-3">
-                {activeOrders.map((order) => {
-                  const config = STATUS_CONFIG[order.status];
-                  const Icon = config.icon;
-                  return (
-                    <motion.div
-                      key={order.id}
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
-                      <Card className="border-border">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <p className="font-medium text-foreground">{order.customerName || "Cliente"}</p>
-                                <Badge className={config.color}>
-                                  <Icon className="h-3 w-3 mr-1" />
-                                  {config.label}
-                                </Badge>
-                              </div>
-                              <p className="text-xs text-muted-foreground">{order.customerPhone}</p>
-                              {order.customerAddress && (
-                                <p className="text-xs text-muted-foreground">📍 {order.customerAddress}</p>
+                {pendingOrders.map((order) => (
+                  <motion.div
+                    key={order.id}
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <Card className="border-border">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium text-foreground">{order.customerName || "Cliente"}</p>
+                              <Badge className={STATUS_CONFIG.pending.color}>
+                                <Clock className="h-3 w-3 mr-1" />
+                                {STATUS_CONFIG.pending.label}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{order.customerPhone}</p>
+                            {order.customerAddress && (
+                              <p className="text-xs text-muted-foreground">📍 {order.customerAddress}</p>
+                            )}
+                          </div>
+                          <p className="text-sm font-bold text-foreground">
+                            ${order.total.toLocaleString("es-AR")}
+                          </p>
+                        </div>
+
+                        <div className="text-sm text-muted-foreground mb-3 space-y-1">
+                          {order.items.map((item, i) => (
+                            <div key={i}>
+                              <p>
+                                {item.quantity}x {item.name} — ${(item.price * item.quantity).toLocaleString("es-AR")}
+                              </p>
+                              {item.variants && Object.keys(item.variants).length > 0 && (
+                                <p className="text-xs text-muted-foreground ml-4">
+                                  {Object.entries(item.variants).map(([key, value]) => `${key}: ${value}`).join(" | ")}
+                                </p>
                               )}
                             </div>
-                            <p className="text-sm font-bold text-foreground">
-                              ${order.total.toLocaleString("es-AR")}
-                            </p>
-                          </div>
+                          ))}
+                        </div>
 
-                          <div className="text-sm text-muted-foreground mb-3 space-y-1">
-                            {order.items.map((item, i) => (
-                              <div key={i}>
-                                <p>
-                                  {item.quantity}x {item.name} — ${(item.price * item.quantity).toLocaleString("es-AR")}
-                                </p>
-                                {item.variants && Object.keys(item.variants).length > 0 && (
-                                  <p className="text-xs text-muted-foreground ml-4">
-                                    {Object.entries(item.variants).map(([key, value]) => `${key}: ${value}`).join(" | ")}
-                                  </p>
-                                )}
-                              </div>
-                            ))}
-                          </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+                          <Clock className="h-3 w-3" />
+                          {new Date(order.createdAt).toLocaleString("es-AR")}
+                        </div>
 
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-                            <Clock className="h-3 w-3" />
-                            {new Date(order.createdAt).toLocaleString("es-AR")}
-                          </div>
-
-                          {/* Status Actions */}
-                          <div className="flex items-center gap-2">
-                            {config.next && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleStatusChange(order.id, config.next!)}
-                                disabled={updatingId === order.id}
-                              >
-                                {updatingId === order.id ? "Actualizando..." : config.nextLabel}
-                              </Button>
-                            )}
-                            {order.status !== "cancelled" && order.status !== "delivered" && (
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleStatusChange(order.id, "cancelled")}
-                                disabled={updatingId === order.id}
-                              >
-                                <XCircle className="h-3.5 w-3.5 mr-1" />
-                                Cancelar
-                              </Button>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  );
-                })}
+                        {/* Actions */}
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleConfirm(order)}
+                            disabled={updatingId === order.id}
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                          >
+                            {updatingId === order.id ? "Procesando..." : "Confirmado"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handlePendiente(order)}
+                            disabled={updatingId === order.id}
+                          >
+                            Pendiente
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleCancel(order.id)}
+                            disabled={updatingId === order.id}
+                          >
+                            <XCircle className="h-3.5 w-3.5 mr-1" />
+                            Cancelar
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* Completed Orders */}
-          {completedOrders.length > 0 && (
+          {/* Confirmed Orders */}
+          {confirmedOrders.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                Completados ({completedOrders.length})
+                Completados ({confirmedOrders.length})
               </h2>
               <div className="space-y-2">
-                {completedOrders.map((order) => {
-                  const config = STATUS_CONFIG[order.status];
-                  const Icon = config.icon;
-                  return (
-                    <Card key={order.id} className="border-border opacity-70">
-                      <CardContent className="p-3 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Badge className={config.color}>
-                            <Icon className="h-3 w-3 mr-1" />
-                            {config.label}
-                          </Badge>
-                          <div>
-                            <p className="text-sm font-medium">{order.customerName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(order.createdAt).toLocaleString("es-AR")}
-                            </p>
-                          </div>
+                {confirmedOrders.map((order) => (
+                  <Card key={order.id} className="border-border opacity-70">
+                    <CardContent className="p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Badge className={STATUS_CONFIG.confirmed.color}>
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          {STATUS_CONFIG.confirmed.label}
+                        </Badge>
+                        <div>
+                          <p className="text-sm font-medium">{order.customerName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(order.createdAt).toLocaleString("es-AR")}
+                          </p>
                         </div>
-                        <p className="text-sm font-bold">${order.total.toLocaleString("es-AR")}</p>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                      </div>
+                      <p className="text-sm font-bold">${order.total.toLocaleString("es-AR")}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Cancelled Orders */}
+          {cancelledOrders.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                Cancelados ({cancelledOrders.length})
+              </h2>
+              <div className="space-y-2">
+                {cancelledOrders.map((order) => (
+                  <Card key={order.id} className="border-border opacity-50">
+                    <CardContent className="p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Badge className={STATUS_CONFIG.cancelled.color}>
+                          <XCircle className="h-3 w-3 mr-1" />
+                          {STATUS_CONFIG.cancelled.label}
+                        </Badge>
+                        <div>
+                          <p className="text-sm font-medium">{order.customerName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(order.createdAt).toLocaleString("es-AR")}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-sm font-bold">${order.total.toLocaleString("es-AR")}</p>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
           )}
