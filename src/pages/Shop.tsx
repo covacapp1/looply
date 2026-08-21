@@ -7,11 +7,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Phone, User, MapPin, StickyNote, Send, Store } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Phone, User, MapPin, StickyNote, Send, Store, ChevronDown, ChevronUp } from "lucide-react";
 import { findShopCustomer, createShopCustomer, getMenuItems, createOrder, createSale } from "@/services/supabase";
-import type { MenuItem, ShopCustomer } from "@/types";
+import type { MenuItem, ShopCustomer, ProductVariant } from "@/types";
 
 type ViewState = "phone" | "register" | "menu" | "cart" | "order-sent";
+
+interface CartItem {
+  item: MenuItem;
+  quantity: number;
+  selectedVariants: Record<string, string>;
+}
 
 export default function ShopPage() {
   const { merchantId } = useParams<{ merchantId: string }>();
@@ -19,9 +25,13 @@ export default function ShopPage() {
   const [phone, setPhone] = useState("");
   const [customer, setCustomer] = useState<ShopCustomer | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [cart, setCart] = useState<{ item: MenuItem; quantity: number }[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Variant selection state
+  const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
 
   // Registration form
   const [regName, setRegName] = useState("");
@@ -73,26 +83,34 @@ export default function ShopPage() {
   }
 
   function addToCart(item: MenuItem) {
+    const variants = item.variants?.length > 0 ? selectedVariants : {};
     setCart((prev) => {
-      const existing = prev.find((c) => c.item.id === item.id);
+      const key = `${item.id}-${JSON.stringify(variants)}`;
+      const existing = prev.find((c) => {
+        const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}`;
+        return cKey === key;
+      });
       if (existing) {
-        return prev.map((c) =>
-          c.item.id === item.id ? { ...c, quantity: c.quantity + 1 } : c
-        );
+        return prev.map((c) => {
+          const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}`;
+          return cKey === key ? { ...c, quantity: c.quantity + 1 } : c;
+        });
       }
-      return [...prev, { item, quantity: 1 }];
+      return [...prev, { item, quantity: 1, selectedVariants: variants }];
     });
+    setSelectedVariants({});
+    setExpandedItem(null);
   }
 
-  function removeFromCart(itemId: string) {
+  function removeFromCart(index: number) {
     setCart((prev) => {
-      const existing = prev.find((c) => c.item.id === itemId);
+      const existing = prev[index];
       if (existing && existing.quantity > 1) {
-        return prev.map((c) =>
-          c.item.id === itemId ? { ...c, quantity: c.quantity - 1 } : c
+        return prev.map((c, i) =>
+          i === index ? { ...c, quantity: c.quantity - 1 } : c
         );
       }
-      return prev.filter((c) => c.item.id !== itemId);
+      return prev.filter((_, i) => i !== index);
     });
   }
 
@@ -116,6 +134,7 @@ export default function ShopPage() {
         name: c.item.name,
         price: c.item.price,
         quantity: c.quantity,
+        variants: c.selectedVariants,
       })),
       total: getCartTotal(),
     });
@@ -327,50 +346,93 @@ export default function ShopPage() {
                 {menuItems
                   .filter((m) => m.category === category && m.isAvailable)
                   .map((item) => {
-                    const cartItem = cart.find((c) => c.item.id === item.id);
-                    const qty = cartItem?.quantity || 0;
+                    const isExpanded = expandedItem === item.id;
+                    const hasVariants = item.variants && item.variants.length > 0;
 
                     return (
                       <Card key={item.id} className="border-border">
-                        <CardContent className="p-4 flex items-center gap-3">
-                          {item.imageUrl ? (
-                            <img
-                              src={item.imageUrl}
-                              alt={item.name}
-                              className="h-16 w-16 rounded-lg object-cover flex-shrink-0"
-                            />
-                          ) : null}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-foreground truncate">{item.name}</p>
-                            {item.description && (
-                              <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-                            )}
-                            <p className="text-sm font-bold text-primary mt-1">
-                              ${item.price.toLocaleString("es-AR")}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {qty > 0 ? (
-                              <>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            {item.imageUrl ? (
+                              <img
+                                src={item.imageUrl}
+                                alt={item.name}
+                                className="h-16 w-16 rounded-lg object-cover flex-shrink-0"
+                              />
+                            ) : null}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-foreground truncate">{item.name}</p>
+                              {item.description && (
+                                <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                              )}
+                              <p className="text-sm font-bold text-primary mt-1">
+                                ${item.price.toLocaleString("es-AR")}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {hasVariants && (
                                 <Button
                                   size="sm"
-                                  variant="outline"
+                                  variant="ghost"
                                   className="h-8 w-8 p-0"
-                                  onClick={() => removeFromCart(item.id)}
+                                  onClick={() => {
+                                    setExpandedItem(isExpanded ? null : item.id);
+                                    setSelectedVariants({});
+                                  }}
                                 >
-                                  {qty === 1 ? <Trash2 className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+                                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                 </Button>
-                                <span className="w-6 text-center text-sm font-bold">{qty}</span>
-                              </>
-                            ) : null}
-                            <Button
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => addToCart(item)}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
+                              )}
+                              {!hasVariants && (
+                                <Button
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => addToCart(item)}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
+
+                          {/* Variant selectors */}
+                          {hasVariants && isExpanded && (
+                            <div className="mt-3 pt-3 border-t border-border space-y-3">
+                              {item.variants.map((variant: ProductVariant) => (
+                                <div key={variant.name}>
+                                  <p className="text-xs font-medium text-muted-foreground mb-1.5">{variant.name}</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {variant.options.map((option) => (
+                                      <button
+                                        key={option}
+                                        type="button"
+                                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                                          selectedVariants[variant.name] === option
+                                            ? "bg-primary text-primary-foreground"
+                                            : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                        }`}
+                                        onClick={() => setSelectedVariants((prev) => ({
+                                          ...prev,
+                                          [variant.name]: option,
+                                        }))}
+                                      >
+                                        {option}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                              <Button
+                                size="sm"
+                                className="w-full mt-2"
+                                onClick={() => addToCart(item)}
+                                disabled={!item.variants.every((v: ProductVariant) => selectedVariants[v.name])}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Agregar
+                              </Button>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     );
@@ -431,22 +493,28 @@ export default function ShopPage() {
               ) : (
                 <>
                   <div className="space-y-3 mb-4">
-                    {cart.map((c) => (
-                      <div key={c.item.id} className="flex items-center justify-between py-2 border-b border-border">
+                    {cart.map((c, index) => (
+                      <div key={`${c.item.id}-${index}`} className="flex items-center justify-between py-2 border-b border-border">
                         <div className="flex-1">
                           <p className="font-medium text-sm">{c.item.name}</p>
-                          <p className="text-xs text-muted-foreground">
+                          {Object.keys(c.selectedVariants).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {Object.entries(c.selectedVariants).map(([key, value]) => (
+                                <Badge key={key} variant="secondary" className="text-[10px]">
+                                  {key}: {value}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">
                             ${c.item.price.toLocaleString("es-AR")} x {c.quantity}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => removeFromCart(c.item.id)}>
+                          <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => removeFromCart(index)}>
                             {c.quantity === 1 ? <Trash2 className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
                           </Button>
                           <span className="w-6 text-center text-sm font-bold">{c.quantity}</span>
-                          <Button size="sm" className="h-7 w-7 p-0" onClick={() => addToCart(c.item)}>
-                            <Plus className="h-3 w-3" />
-                          </Button>
                         </div>
                       </div>
                     ))}

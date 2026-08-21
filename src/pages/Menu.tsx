@@ -22,6 +22,10 @@ function getStorageKey(userId: string) {
   return `looply_categories_${userId}`;
 }
 
+function getVariantStorageKey(userId: string) {
+  return `looply_variants_${userId}`;
+}
+
 function loadCategories(userId: string): string[] {
   const stored = localStorage.getItem(getStorageKey(userId));
   if (stored) return JSON.parse(stored);
@@ -31,6 +35,15 @@ function loadCategories(userId: string): string[] {
 
 function saveCategories(userId: string, cats: string[]) {
   localStorage.setItem(getStorageKey(userId), JSON.stringify(cats));
+}
+
+function loadVariantTemplates(userId: string): ProductVariant[] {
+  const stored = localStorage.getItem(getVariantStorageKey(userId));
+  return stored ? JSON.parse(stored) : [];
+}
+
+function saveVariantTemplates(userId: string, variants: ProductVariant[]) {
+  localStorage.setItem(getVariantStorageKey(userId), JSON.stringify(variants));
 }
 
 export default function MenuPage() {
@@ -44,6 +57,9 @@ export default function MenuPage() {
 
   // Categories
   const [categories, setCategories] = useState<string[]>([]);
+
+  // Global variant templates
+  const [variantTemplates, setVariantTemplates] = useState<ProductVariant[]>([]);
 
   // Form
   const [name, setName] = useState("");
@@ -69,6 +85,7 @@ export default function MenuPage() {
     const data = await getMenuItems(user.id);
     setItems(data);
     setCategories(loadCategories(user.id));
+    setVariantTemplates(loadVariantTemplates(user.id));
     setLoading(false);
   }, [user]);
 
@@ -213,9 +230,9 @@ export default function MenuPage() {
 
   function openVariantDialog(editIndex: number | null = null) {
     setEditingVariantIndex(editIndex);
-    if (editIndex !== null && variants[editIndex]) {
-      setNewVariantName(variants[editIndex].name);
-      setNewVariantOptions(variants[editIndex].options.join(", "));
+    if (editIndex !== null && variantTemplates[editIndex]) {
+      setNewVariantName(variantTemplates[editIndex].name);
+      setNewVariantOptions(variantTemplates[editIndex].options.join(", "));
     } else {
       setNewVariantName("");
       setNewVariantOptions("");
@@ -234,21 +251,37 @@ export default function MenuPage() {
       return;
     }
     const newVariant: ProductVariant = { name: newVariantName.trim(), options };
+    let updated: ProductVariant[];
     if (editingVariantIndex !== null) {
-      const updated = [...variants];
+      updated = [...variantTemplates];
       updated[editingVariantIndex] = newVariant;
-      setVariants(updated);
     } else {
-      setVariants([...variants, newVariant]);
+      updated = [...variantTemplates, newVariant];
     }
+    setVariantTemplates(updated);
+    if (user) saveVariantTemplates(user.id, updated);
     setVariantDialogOpen(false);
     setNewVariantName("");
     setNewVariantOptions("");
     setEditingVariantIndex(null);
+    toast.success(editingVariantIndex !== null ? "Variante actualizada" : "Variante creada");
   }
 
-  function handleDeleteVariant(index: number) {
-    setVariants(variants.filter((_, i) => i !== index));
+  function handleDeleteVariantTemplate(index: number) {
+    const updated = variantTemplates.filter((_, i) => i !== index);
+    setVariantTemplates(updated);
+    if (user) saveVariantTemplates(user.id, updated);
+    toast.success("Variante eliminada");
+  }
+
+  function handleToggleVariant(variant: ProductVariant) {
+    setVariants((prev) => {
+      const exists = prev.some((v) => v.name === variant.name);
+      if (exists) {
+        return prev.filter((v) => v.name !== variant.name);
+      }
+      return [...prev, variant];
+    });
   }
 
   const itemsByCategory = categories.map((cat) => ({
@@ -266,6 +299,10 @@ export default function MenuPage() {
             <Button size="sm" variant="outline" onClick={() => setCatDialogOpen(true)}>
               <Tag className="h-4 w-4 mr-2" />
               Categorías
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setVariantDialogOpen(true)}>
+              <ListPlus className="h-4 w-4 mr-2" />
+              Variantes
             </Button>
             <Button size="sm" onClick={openCreate}>
               <PlusCircle className="h-4 w-4 mr-2" />
@@ -424,36 +461,39 @@ export default function MenuPage() {
               </div>
             </div>
 
-            {/* Variants */}
+            {/* Variants assigned to product */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Variantes (opcional)</Label>
-                <Button type="button" size="sm" variant="outline" onClick={() => openVariantDialog()}>
-                  <ListPlus className="h-3.5 w-3.5 mr-1" />
-                  Agregar
-                </Button>
+                <Label>Variantes</Label>
+                {variantTemplates.length === 0 && (
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setVariantDialogOpen(true)}>
+                    <ListPlus className="h-3.5 w-3.5 mr-1" />
+                    Crear variante
+                  </Button>
+                )}
               </div>
-              {variants.length > 0 ? (
-                <div className="space-y-2">
-                  {variants.map((v, i) => (
-                    <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                      <div>
-                        <p className="text-sm font-medium">{v.name}</p>
-                        <p className="text-xs text-muted-foreground">{v.options.join(", ")}</p>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openVariantDialog(i)}>
-                          ✏️
-                        </Button>
-                        <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDeleteVariant(i)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+              {variantTemplates.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {variantTemplates.map((vt) => {
+                    const isSelected = variants.some((v) => v.name === vt.name);
+                    return (
+                      <button
+                        key={vt.name}
+                        type="button"
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          isSelected
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        }`}
+                        onClick={() => handleToggleVariant(vt)}
+                      >
+                        {vt.name}
+                      </button>
+                    );
+                  })}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground">Ej: Tamaño (Chico, Mediano, Grande)</p>
+                <p className="text-xs text-muted-foreground">Creá variantes desde el botón "Variantes" arriba</p>
               )}
             </div>
 
@@ -509,29 +549,59 @@ export default function MenuPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Variant Dialog */}
+      {/* Variant Templates Dialog */}
       <Dialog open={variantDialogOpen} onOpenChange={setVariantDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingVariantIndex !== null ? "Editar Variante" : "Agregar Variante"}</DialogTitle>
+            <DialogTitle>Gestionar Variantes</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label>Nombre de la variante *</Label>
-              <Input placeholder="Ej: Tamaño, Color, Sabor" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Opciones (separadas por coma) *</Label>
-              <Input placeholder="Ej: Chico, Mediano, Grande" value={newVariantOptions} onChange={(e) => setNewVariantOptions(e.target.value)} />
-              <p className="text-xs text-muted-foreground">Mínimo 2 opciones</p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setVariantDialogOpen(false)} className="flex-1">
-                Cancelar
-              </Button>
-              <Button onClick={handleSaveVariant} className="flex-1">
-                {editingVariantIndex !== null ? "Guardar" : "Agregar"}
-              </Button>
+            {variantTemplates.length > 0 ? (
+              <div className="space-y-2">
+                {variantTemplates.map((v, i) => (
+                  <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                    <div>
+                      <p className="text-sm font-medium">{v.name}</p>
+                      <p className="text-xs text-muted-foreground">{v.options.join(", ")}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openVariantDialog(i)}>
+                        ✏️
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDeleteVariantTemplate(i)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground text-center py-4">No hay variantes creadas</p>
+            )}
+
+            <div className="border-t border-border pt-4">
+              <p className="text-sm font-medium mb-3">{editingVariantIndex !== null ? "Editar variante" : "Nueva variante"}</p>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Nombre de la variante *</Label>
+                  <Input placeholder="Ej: Tamaño, Color, Sabor" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Opciones (separadas por coma) *</Label>
+                  <Input placeholder="Ej: Chico, Mediano, Grande" value={newVariantOptions} onChange={(e) => setNewVariantOptions(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">Mínimo 2 opciones</p>
+                </div>
+                <div className="flex gap-2">
+                  {editingVariantIndex !== null && (
+                    <Button variant="outline" onClick={() => { setEditingVariantIndex(null); setNewVariantName(""); setNewVariantOptions(""); }} className="flex-1">
+                      Cancelar edición
+                    </Button>
+                  )}
+                  <Button onClick={handleSaveVariant} className="flex-1" disabled={!newVariantName.trim() || !newVariantOptions.trim()}>
+                    {editingVariantIndex !== null ? "Guardar" : "Crear"}
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </DialogContent>
