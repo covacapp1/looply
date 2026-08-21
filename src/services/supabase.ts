@@ -489,24 +489,44 @@ export async function getShopCustomers(merchantId: string): Promise<ShopCustomer
 export async function findShopCustomer(merchantId: string, phone: string): Promise<ShopCustomer | null> {
   if (!isSupabaseConfigured() || !supabase) return null;
 
-  const { data, error } = await supabase
+  // Buscar en shop_customers primero
+  const { data: shopData, error: shopError } = await supabase
     .from("shop_customers")
     .select("*")
     .eq("merchant_id", merchantId)
     .eq("phone", phone)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (!shopError && shopData) {
+    return {
+      id: shopData.id,
+      merchantId: shopData.merchant_id,
+      phone: shopData.phone,
+      name: shopData.name,
+      address: shopData.address || "",
+      notes: shopData.notes || "",
+      createdAt: new Date(shopData.created_at),
+    };
+  }
 
-  return {
-    id: data.id,
-    merchantId: data.merchant_id,
-    phone: data.phone,
-    name: data.name,
-    address: data.address || "",
-    notes: data.notes || "",
-    createdAt: new Date(data.created_at),
-  };
+  // Si no se encontró, buscar en customers (tabla de fidelidad) por teléfono
+  const { data: loyaltyData } = await supabase
+    .from("customers")
+    .select("*")
+    .eq("phone", phone)
+    .maybeSingle();
+
+  if (loyaltyData) {
+    // Auto-registrar en shop_customers para que aparezca en el shop
+    const newCustomer = await createShopCustomer({
+      merchantId,
+      phone: loyaltyData.phone,
+      name: `${loyaltyData.first_name} ${loyaltyData.last_name}`,
+    });
+    return newCustomer;
+  }
+
+  return null;
 }
 
 export async function createShopCustomer(customer: {
