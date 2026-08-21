@@ -157,9 +157,16 @@ export default function OrdersPage() {
 
                           <div className="text-sm text-muted-foreground mb-3 space-y-1">
                             {order.items.map((item, i) => (
-                              <p key={i}>
-                                {item.quantity}x {item.name} — ${(item.price * item.quantity).toLocaleString("es-AR")}
-                              </p>
+                              <div key={i}>
+                                <p>
+                                  {item.quantity}x {item.name} — ${(item.price * item.quantity).toLocaleString("es-AR")}
+                                </p>
+                                {item.variants && Object.keys(item.variants).length > 0 && (
+                                  <p className="text-xs text-muted-foreground ml-4">
+                                    {Object.entries(item.variants).map(([key, value]) => `${key}: ${value}`).join(" | ")}
+                                  </p>
+                                )}
+                              </div>
                             ))}
                           </div>
 

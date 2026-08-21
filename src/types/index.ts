@@ -103,6 +103,7 @@ export interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  variants?: Record<string, string>;
 }
 
 export interface Order {
