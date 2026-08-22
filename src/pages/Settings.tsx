@@ -17,7 +17,7 @@ const defaultSettings: BusinessSettings = {
   name: "", slug: "", description: "", phone: "", email: "",
   address: "", city: "", country: "", website: "",
   instagram: "", facebook: "", whatsapp: "",
-  orderMessage: "", orderTime: "30",
+  orderMessage: "", orderTime: "30", openTime: "09:00", closeTime: "22:00",
 };
 
 export default function SettingsPage() {
@@ -202,6 +202,16 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="whatsapp">WhatsApp</Label>
                   <Input id="whatsapp" placeholder="Ej: +541112345678" value={settings.whatsapp} onChange={(e) => updateSettings("whatsapp", e.target.value)} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="openTime">Horario de apertura</Label>
+                    <Input id="openTime" type="time" value={settings.openTime} onChange={(e) => updateSettings("openTime", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="closeTime">Horario de cierre</Label>
+                    <Input id="closeTime" type="time" value={settings.closeTime} onChange={(e) => updateSettings("closeTime", e.target.value)} />
+                  </div>
                 </div>
               </div>
               <Button onClick={handleSaveSettings} disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90">

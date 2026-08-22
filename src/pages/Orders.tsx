@@ -258,9 +258,9 @@ export default function OrdersPage() {
                                   {Object.entries(item.variants).map(([key, value]) => `${key}: ${value}`).join(" | ")}
                                 </p>
                               )}
-                              {item.selectedExtras && item.selectedExtras.length > 0 && (
+                              {item.variantPrices && Object.keys(item.variantPrices).length > 0 && (
                                 <p className="text-xs text-muted-foreground ml-4">
-                                  Agregados: {item.selectedExtras.join(", ")}
+                                  {Object.entries(item.variantPrices).map(([key, price]) => `${key}: +$${price}`).join(" | ")}
                                 </p>
                               )}
                             </div>

@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Phone, User, MapPin, StickyNote, Send, Store, ChevronDown, ChevronUp } from "lucide-react";
-import { findShopCustomer, createShopCustomer, getMenuItems, createOrder, createSale } from "@/services/supabase";
+import { findShopCustomer, createShopCustomer, getMenuItems, createOrder, createSale, getBusinessSettings } from "@/services/supabase";
 import type { MenuItem, ShopCustomer, ProductVariant } from "@/types";
 
 type ViewState = "phone" | "register" | "menu" | "cart" | "order-sent";
@@ -17,7 +17,7 @@ interface CartItem {
   item: MenuItem;
   quantity: number;
   selectedVariants: Record<string, string>;
-  selectedExtras: string[];
+  variantPrices: Record<string, number>;
 }
 
 export default function ShopPage() {
@@ -29,23 +29,45 @@ export default function ShopPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isOpen, setIsOpen] = useState(true);
+  const [openTime, setOpenTime] = useState("09:00");
+  const [closeTime, setCloseTime] = useState("22:00");
 
   // Variant selection state
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
-  const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
+  const [variantPrices, setVariantPrices] = useState<Record<string, number>>({});
 
   // Registration form
   const [regName, setRegName] = useState("");
   const [regAddress, setRegAddress] = useState("");
   const [regNotes, setRegNotes] = useState("");
 
-  // Load menu on mount
+  // Load menu and check hours on mount
   useEffect(() => {
     if (merchantId) {
       getMenuItems(merchantId).then(setMenuItems);
+      getBusinessSettings(merchantId).then((settings) => {
+        setOpenTime(settings.openTime || "09:00");
+        setCloseTime(settings.closeTime || "22:00");
+        checkIfOpen(settings.openTime || "09:00", settings.closeTime || "22:00");
+      });
     }
   }, [merchantId]);
+
+  function checkIfOpen(open: string, close: string) {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const current = hours * 60 + minutes;
+
+    const [openH, openM] = open.split(":").map(Number);
+    const [closeH, closeM] = close.split(":").map(Number);
+    const openMinutes = openH * 60 + openM;
+    const closeMinutes = closeH * 60 + closeM;
+
+    setIsOpen(current >= openMinutes && current < closeMinutes);
+  }
 
   async function handlePhoneSubmit() {
     if (!phone.trim() || !merchantId) return;
@@ -86,23 +108,23 @@ export default function ShopPage() {
 
   function addToCart(item: MenuItem) {
     const variants = item.variants?.length > 0 ? selectedVariants : {};
-    const extras = item.extras?.length > 0 ? selectedExtras : [];
+    const prices = item.variants?.length > 0 ? variantPrices : {};
     setCart((prev) => {
-      const key = `${item.id}-${JSON.stringify(variants)}-${JSON.stringify(extras)}`;
+      const key = `${item.id}-${JSON.stringify(variants)}`;
       const existing = prev.find((c) => {
-        const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}-${JSON.stringify(c.selectedExtras)}`;
+        const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}`;
         return cKey === key;
       });
       if (existing) {
         return prev.map((c) => {
-          const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}-${JSON.stringify(c.selectedExtras)}`;
+          const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}`;
           return cKey === key ? { ...c, quantity: c.quantity + 1 } : c;
         });
       }
-      return [...prev, { item, quantity: 1, selectedVariants: variants, selectedExtras: extras }];
+      return [...prev, { item, quantity: 1, selectedVariants: variants, variantPrices: prices }];
     });
     setSelectedVariants({});
-    setSelectedExtras([]);
+    setVariantPrices({});
     setExpandedItem(null);
   }
 
@@ -120,11 +142,8 @@ export default function ShopPage() {
 
   function getCartTotal() {
     return cart.reduce((sum, c) => {
-      const extrasPrice = c.selectedExtras.reduce((eSum, extraName) => {
-        const extra = c.item.extras?.find((e) => e.name === extraName);
-        return eSum + (extra?.price || 0);
-      }, 0);
-      return sum + (c.item.price + extrasPrice) * c.quantity;
+      const variantTotal = Object.values(c.variantPrices).reduce((vSum, p) => vSum + p, 0);
+      return sum + (c.item.price + variantTotal) * c.quantity;
     }, 0);
   }
 
@@ -145,7 +164,7 @@ export default function ShopPage() {
         price: c.item.price,
         quantity: c.quantity,
         variants: c.selectedVariants,
-        selectedExtras: c.selectedExtras,
+        variantPrices: c.variantPrices,
       })),
       total: getCartTotal(),
     });
@@ -163,6 +182,36 @@ export default function ShopPage() {
       setView("order-sent");
     }
     setLoading(false);
+  }
+
+  // LOCAL CERRADO
+  if (!isOpen) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-red-50 to-white flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-sm text-center"
+        >
+          <div className="h-16 w-16 rounded-2xl bg-red-100 flex items-center justify-center mb-4 mx-auto">
+            <Store className="h-8 w-8 text-red-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Local Cerrado</h1>
+          <p className="text-muted-foreground mb-4">
+            Nuestro horario de atención es:
+          </p>
+          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-border shadow-sm">
+            <Clock className="h-5 w-5 text-primary" />
+            <span className="text-lg font-bold text-foreground">
+              {openTime} — {closeTime}
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground mt-6">
+            Volvé dentro de nuestro horario de atención
+          </p>
+        </motion.div>
+      </div>
+    );
   }
 
   // PHONE VIEW
@@ -414,37 +463,12 @@ export default function ShopPage() {
                                 <div key={variant.name}>
                                   <p className="text-xs font-medium text-muted-foreground mb-1.5">{variant.name}</p>
                                   <div className="flex flex-wrap gap-1.5">
-                                    {variant.options.map((option) => (
-                                      <button
-                                        key={option}
-                                        type="button"
-                                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                                          selectedVariants[variant.name] === option
-                                            ? "bg-primary text-primary-foreground"
-                                            : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                        }`}
-                                        onClick={() => setSelectedVariants((prev) => ({
-                                          ...prev,
-                                          [variant.name]: option,
-                                        }))}
-                                      >
-                                        {option}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-
-                              {item.extras?.length > 0 && (
-                                <div>
-                                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Agregados</p>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {item.extras.map((extra) => {
-                                      const isSelected = selectedExtras.includes(extra.name);
-                                      const priceLabel = extra.price > 0 ? ` +$${extra.price.toLocaleString("es-AR")}` : " FREE";
+                                    {variant.options.map((option) => {
+                                      const isSelected = selectedVariants[variant.name] === option.name;
+                                      const priceLabel = option.price > 0 ? ` +$${option.price.toLocaleString("es-AR")}` : "";
                                       return (
                                         <button
-                                          key={extra.name}
+                                          key={option.name}
                                           type="button"
                                           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                                             isSelected
@@ -452,20 +476,23 @@ export default function ShopPage() {
                                               : "bg-muted text-muted-foreground hover:bg-muted/80"
                                           }`}
                                           onClick={() => {
-                                            setSelectedExtras((prev) =>
-                                              prev.includes(extra.name)
-                                                ? prev.filter((e) => e !== extra.name)
-                                                : [...prev, extra.name]
-                                            );
+                                            setSelectedVariants((prev) => ({
+                                              ...prev,
+                                              [variant.name]: option.name,
+                                            }));
+                                            setVariantPrices((prev) => ({
+                                              ...prev,
+                                              [variant.name]: option.price,
+                                            }));
                                           }}
                                         >
-                                          {extra.name}{priceLabel}
+                                          {option.name}{priceLabel}
                                         </button>
                                       );
                                     })}
                                   </div>
                                 </div>
-                              )}
+                              ))}
 
                               <Button
                                 size="sm"
@@ -546,21 +573,9 @@ export default function ShopPage() {
                             <div className="flex flex-wrap gap-1 mt-1">
                               {Object.entries(c.selectedVariants).map(([key, value]) => (
                                 <Badge key={key} variant="secondary" className="text-[10px]">
-                                  {key}: {value}
+                                  {key}: {value}{c.variantPrices[key] ? ` +$${c.variantPrices[key]}` : ""}
                                 </Badge>
                               ))}
-                            </div>
-                          )}
-                          {c.selectedExtras.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {c.selectedExtras.map((extraName) => {
-                                const extra = c.item.extras?.find((e) => e.name === extraName);
-                                return (
-                                  <Badge key={extraName} variant="secondary" className="text-[10px]">
-                                    {extraName}{extra?.price ? ` +$${extra.price}` : " FREE"}
-                                  </Badge>
-                                );
-                              })}
                             </div>
                           )}
                           <p className="text-xs text-muted-foreground mt-1">

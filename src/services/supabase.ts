@@ -371,7 +371,6 @@ export async function getMenuItems(merchantId: string): Promise<MenuItem[]> {
     isAvailable: m.is_available,
     imageUrl: m.image_url || "",
     variants: m.variants || [],
-    extras: m.extras || [],
     createdAt: new Date(m.created_at),
   }));
 }
@@ -391,7 +390,6 @@ export async function createMenuItem(item: Omit<MenuItem, "id" | "createdAt">): 
       is_available: item.isAvailable,
       image_url: item.imageUrl || "",
       variants: item.variants || [],
-      extras: item.extras || [],
     })
     .select()
     .single();
@@ -412,7 +410,6 @@ export async function createMenuItem(item: Omit<MenuItem, "id" | "createdAt">): 
     isAvailable: data.is_available,
     imageUrl: data.image_url || "",
     variants: data.variants || [],
-    extras: data.extras || [],
     createdAt: new Date(data.created_at),
   };
 }
@@ -431,7 +428,6 @@ export async function updateMenuItem(id: string, updates: Partial<MenuItem>): Pr
       is_available: updates.isAvailable,
       image_url: updates.imageUrl,
       variants: updates.variants,
-      extras: updates.extras,
     })
     .eq("id", id)
     .select()
@@ -453,7 +449,6 @@ export async function updateMenuItem(id: string, updates: Partial<MenuItem>): Pr
     isAvailable: data.is_available,
     imageUrl: data.image_url || "",
     variants: data.variants || [],
-    extras: data.extras || [],
     createdAt: new Date(data.created_at),
   };
 }
@@ -604,7 +599,7 @@ export async function getOrdersByMerchant(merchantId: string): Promise<Order[]> 
 export async function createOrder(order: {
   merchantId: string;
   customerId: string;
-  items: { menuItemId: string; name: string; price: number; quantity: number; variants?: Record<string, string>; selectedExtras?: string[] }[];
+  items: { menuItemId: string; name: string; price: number; quantity: number; variants?: Record<string, string>; variantPrices?: Record<string, number> }[];
   total: number;
 }): Promise<Order | null> {
   if (!isSupabaseConfigured() || !supabase) return null;
@@ -820,6 +815,8 @@ export interface BusinessSettings {
   whatsapp: string;
   orderMessage: string;
   orderTime: string;
+  openTime: string;
+  closeTime: string;
 }
 
 const defaultSettings: BusinessSettings = {
@@ -837,6 +834,8 @@ const defaultSettings: BusinessSettings = {
   whatsapp: "",
   orderMessage: "Hola {cliente}, gracias por tu compra. Tu pedido #{pedido} fue recibido y estará listo en aproximadamente {tiempo} minutos.",
   orderTime: "30",
+  openTime: "09:00",
+  closeTime: "22:00",
 };
 
 export async function getBusinessSettings(userId: string): Promise<BusinessSettings> {
@@ -871,6 +870,8 @@ export async function getBusinessSettings(userId: string): Promise<BusinessSetti
     whatsapp: data.whatsapp || "",
     orderMessage: data.order_message || defaultSettings.orderMessage,
     orderTime: data.order_time || defaultSettings.orderTime,
+    openTime: data.open_time || defaultSettings.openTime,
+    closeTime: data.close_time || defaultSettings.closeTime,
   };
 
   localStorage.setItem("businessSettings", JSON.stringify(settings));
@@ -901,6 +902,8 @@ export async function saveBusinessSettings(userId: string, settings: BusinessSet
       whatsapp: settings.whatsapp,
       order_message: settings.orderMessage,
       order_time: settings.orderTime,
+      open_time: settings.openTime,
+      close_time: settings.closeTime,
       updated_at: new Date().toISOString(),
     }, { onConflict: "user_id" });
 

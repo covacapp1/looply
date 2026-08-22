@@ -13,7 +13,7 @@ import { UtensilsCrossed, PlusCircle, Trash2, Eye, EyeOff, Camera, X, Tag, ListP
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { getMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from "@/services/supabase";
-import type { MenuItem, ProductVariant, ProductExtra } from "@/types";
+import type { MenuItem, ProductVariant } from "@/types";
 import { toast } from "sonner";
 
 const DEFAULT_CATEGORIES = ["General", "Entradas", "Platos", "Bebidas", "Postres", "Otros"];
@@ -74,13 +74,8 @@ export default function MenuPage() {
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [variantDialogOpen, setVariantDialogOpen] = useState(false);
   const [newVariantName, setNewVariantName] = useState("");
-  const [newVariantOptions, setNewVariantOptions] = useState("");
+  const [newVariantOptions, setNewVariantOptions] = useState<{ name: string; price: string }[]>([{ name: "", price: "" }]);
   const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
-
-  // Extras
-  const [extras, setExtras] = useState<ProductExtra[]>([]);
-  const [newExtraName, setNewExtraName] = useState("");
-  const [newExtraPrice, setNewExtraPrice] = useState("");
 
   // New category
   const [newCatName, setNewCatName] = useState("");
@@ -107,7 +102,6 @@ export default function MenuPage() {
     setCategory(categories[0] || "General");
     setImageUrl("");
     setVariants([]);
-    setExtras([]);
     setDialogOpen(true);
   }
 
@@ -120,7 +114,6 @@ export default function MenuPage() {
     setCategory(item.category);
     setImageUrl(item.imageUrl || "");
     setVariants(item.variants || []);
-    setExtras(item.extras || []);
     setDialogOpen(true);
   }
 
@@ -165,7 +158,6 @@ export default function MenuPage() {
         isAvailable: editingItem.isAvailable,
         imageUrl,
         variants,
-        extras,
       });
       if (updated) {
         setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
@@ -182,7 +174,6 @@ export default function MenuPage() {
         isAvailable: true,
         imageUrl,
         variants,
-        extras,
       });
       if (created) {
         setItems((prev) => [...prev, created]);
@@ -241,24 +232,25 @@ export default function MenuPage() {
     setEditingVariantIndex(editIndex);
     if (editIndex !== null && variantTemplates[editIndex]) {
       setNewVariantName(variantTemplates[editIndex].name);
-      setNewVariantOptions(variantTemplates[editIndex].options.join(", "));
+      setNewVariantOptions(variantTemplates[editIndex].options.map((o) => ({ name: o.name, price: o.price.toString() })));
     } else {
       setNewVariantName("");
-      setNewVariantOptions("");
+      setNewVariantOptions([{ name: "", price: "" }]);
     }
     setVariantDialogOpen(true);
   }
 
   function handleSaveVariant() {
-    if (!newVariantName.trim() || !newVariantOptions.trim()) {
-      toast.error("Completá nombre y opciones");
+    if (!newVariantName.trim()) {
+      toast.error("Poné un nombre para la variante");
       return;
     }
-    const options = newVariantOptions.split(",").map((o) => o.trim()).filter(Boolean);
-    if (options.length < 2) {
-      toast.error("Agregá al menos 2 opciones separadas por coma");
+    const validOptions = newVariantOptions.filter((o) => o.name.trim());
+    if (validOptions.length < 1) {
+      toast.error("Agregá al menos 1 opción");
       return;
     }
+    const options = validOptions.map((o) => ({ name: o.name.trim(), price: parseFloat(o.price) || 0 }));
     const newVariant: ProductVariant = { name: newVariantName.trim(), options };
     let updated: ProductVariant[];
     if (editingVariantIndex !== null) {
@@ -271,7 +263,7 @@ export default function MenuPage() {
     if (user) saveVariantTemplates(user.id, updated);
     setVariantDialogOpen(false);
     setNewVariantName("");
-    setNewVariantOptions("");
+    setNewVariantOptions([{ name: "", price: "" }]);
     setEditingVariantIndex(null);
     toast.success(editingVariantIndex !== null ? "Variante actualizada" : "Variante creada");
   }
@@ -506,63 +498,6 @@ export default function MenuPage() {
               )}
             </div>
 
-            {/* Extras (agregados opcionales con precio) */}
-            <div className="space-y-2">
-              <Label>Agregados opcionales</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Nombre"
-                  value={newExtraName}
-                  onChange={(e) => setNewExtraName(e.target.value)}
-                  className="flex-1"
-                />
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="$0 = FREE"
-                  value={newExtraPrice}
-                  onChange={(e) => setNewExtraPrice(e.target.value)}
-                  className="w-24"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    if (newExtraName.trim()) {
-                      setExtras([...extras, {
-                        name: newExtraName.trim(),
-                        price: parseFloat(newExtraPrice) || 0,
-                      }]);
-                      setNewExtraName("");
-                      setNewExtraPrice("");
-                    }
-                  }}
-                  disabled={!newExtraName.trim()}
-                >
-                  <PlusCircle className="h-4 w-4" />
-                </Button>
-              </div>
-              {extras.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {extras.map((extra) => (
-                    <Badge key={extra.name} variant="secondary" className="text-xs gap-1">
-                      {extra.name} {extra.price > 0 ? `+$${extra.price}` : "FREE"}
-                      <button
-                        type="button"
-                        className="ml-1 hover:text-destructive"
-                        onClick={() => setExtras(extras.filter((e) => e.name !== extra.name))}
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">Precio 0 = gratis. El cliente elige qué agregar.</p>
-            </div>
-
             <Button className="w-full" onClick={handleSave} disabled={saving || !name.trim() || !price}>
               {saving ? "Guardando..." : editingItem ? "Guardar Cambios" : "Agregar Producto"}
             </Button>
@@ -617,7 +552,7 @@ export default function MenuPage() {
 
       {/* Variant Templates Dialog */}
       <Dialog open={variantDialogOpen} onOpenChange={setVariantDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Gestionar Variantes</DialogTitle>
           </DialogHeader>
@@ -628,7 +563,9 @@ export default function MenuPage() {
                   <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
                     <div>
                       <p className="text-sm font-medium">{v.name}</p>
-                      <p className="text-xs text-muted-foreground">{v.options.join(", ")}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {v.options.map((o) => `${o.name} $${o.price}`).join(", ")}
+                      </p>
                     </div>
                     <div className="flex gap-1">
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openVariantDialog(i)}>
@@ -650,20 +587,65 @@ export default function MenuPage() {
               <div className="space-y-3">
                 <div className="space-y-2">
                   <Label>Nombre de la variante *</Label>
-                  <Input placeholder="Ej: Tamaño, Color, Sabor" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} />
+                  <Input placeholder="Ej: Bebida, Tamaño, Sabor" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Opciones (separadas por coma) *</Label>
-                  <Input placeholder="Ej: Chico, Mediano, Grande" value={newVariantOptions} onChange={(e) => setNewVariantOptions(e.target.value)} />
-                  <p className="text-xs text-muted-foreground">Mínimo 2 opciones</p>
+                  <Label>Opciones</Label>
+                  {newVariantOptions.map((opt, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <Input
+                        placeholder="Nombre"
+                        value={opt.name}
+                        onChange={(e) => {
+                          const updated = [...newVariantOptions];
+                          updated[i].name = e.target.value;
+                          setNewVariantOptions(updated);
+                        }}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="$0"
+                        value={opt.price}
+                        onChange={(e) => {
+                          const updated = [...newVariantOptions];
+                          updated[i].price = e.target.value;
+                          setNewVariantOptions(updated);
+                        }}
+                        className="w-20"
+                      />
+                      {newVariantOptions.length > 1 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-destructive"
+                          onClick={() => setNewVariantOptions(newVariantOptions.filter((_, j) => j !== i))}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setNewVariantOptions([...newVariantOptions, { name: "", price: "" }])}
+                  >
+                    <PlusCircle className="h-3.5 w-3.5 mr-1" />
+                    Agregar opción
+                  </Button>
                 </div>
                 <div className="flex gap-2">
                   {editingVariantIndex !== null && (
-                    <Button variant="outline" onClick={() => { setEditingVariantIndex(null); setNewVariantName(""); setNewVariantOptions(""); }} className="flex-1">
+                    <Button variant="outline" onClick={() => { setEditingVariantIndex(null); setNewVariantName(""); setNewVariantOptions([{ name: "", price: "" }]); }} className="flex-1">
                       Cancelar edición
                     </Button>
                   )}
-                  <Button onClick={handleSaveVariant} className="flex-1" disabled={!newVariantName.trim() || !newVariantOptions.trim()}>
+                  <Button onClick={handleSaveVariant} className="flex-1" disabled={!newVariantName.trim()}>
                     {editingVariantIndex !== null ? "Guardar" : "Crear"}
                   </Button>
                 </div>

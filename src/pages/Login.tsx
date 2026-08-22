@@ -69,6 +69,8 @@ export default function LoginPage() {
           whatsapp: "",
           orderMessage: "",
           orderTime: "30",
+          openTime: "09:00",
+          closeTime: "22:00",
         });
       }
       setError("Cuenta creada. Iniciá sesión.");
