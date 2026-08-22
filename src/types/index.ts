@@ -115,7 +115,7 @@ export interface Order {
   customerAddress?: string;
   items: OrderItem[];
   total: number;
-  status: "pending" | "preparing" | "sent" | "delivered" | "cancelled";
+  status: "pending" | "confirmed" | "cancelled";
   createdAt: Date;
   updatedAt: Date;
 }
