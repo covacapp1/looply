@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Wallet, TrendingUp, ShoppingCart, PlusCircle, DollarSign, Lock, Unlock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getSalesByMerchant, createSale, getMenuItems, getOpenRegister, openRegister, closeRegister } from "@/services/supabase";
-import type { Sale, MenuItem, DailyRegister } from "@/types";
+import type { Sale, MenuItem, DailyRegister, ProductVariant } from "@/types";
 import { toast } from "sonner";
 
 export default function CajaPage() {
@@ -34,6 +34,10 @@ export default function CajaPage() {
   // Open/Close form
   const [openingAmount, setOpeningAmount] = useState("");
   const [closingAmount, setClosingAmount] = useState("");
+
+  // Variant selection
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+  const [variantPrices, setVariantPrices] = useState<Record<string, number>>({});
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -81,6 +85,8 @@ export default function CajaPage() {
 
   function handleProductSelect(productId: string) {
     setSelectedProduct(productId);
+    setSelectedVariants({});
+    setVariantPrices({});
     if (productId === "custom") {
       setManualAmount("");
       setManualDesc("");
@@ -100,14 +106,15 @@ export default function CajaPage() {
       const item = menuItems.find((m) => m.id === selectedProduct);
       if (item) {
         const qty = parseInt(manualQty) || 1;
-        setManualAmount((item.price * qty).toString());
+        const variantTotal = Object.values(variantPrices).reduce((sum, p) => sum + p, 0);
+        setManualAmount(((item.price + variantTotal) * qty).toString());
       }
     }
   }
 
   useEffect(() => {
     updateTotal();
-  }, [manualQty, selectedProduct]);
+  }, [manualQty, selectedProduct, variantPrices]);
 
   async function handleManualSale() {
     if (!user || !manualAmount || parseFloat(manualAmount) <= 0 || !register) return;
@@ -202,15 +209,63 @@ export default function CajaPage() {
                       </div>
 
                       {selectedProduct && selectedProduct !== "custom" && (
-                        <div className="space-y-2">
-                          <Label>Cantidad</Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={manualQty}
-                            onChange={(e) => setManualQty(e.target.value)}
-                          />
-                        </div>
+                        <>
+                          {/* Variant selectors */}
+                          {(() => {
+                            const item = menuItems.find((m) => m.id === selectedProduct);
+                            if (item?.variants?.length > 0) {
+                              return (
+                                <div className="space-y-3">
+                                  {item.variants.map((variant: ProductVariant) => (
+                                    <div key={variant.name}>
+                                      <Label className="text-xs text-muted-foreground mb-1.5">{variant.name}</Label>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {variant.options.map((option) => {
+                                          const isSelected = selectedVariants[variant.name] === option.name;
+                                          const priceLabel = option.price > 0 ? ` +$${option.price.toLocaleString("es-AR")}` : "";
+                                          return (
+                                            <button
+                                              key={option.name}
+                                              type="button"
+                                              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                                                isSelected
+                                                  ? "bg-primary text-primary-foreground"
+                                                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                              }`}
+                                              onClick={() => {
+                                                setSelectedVariants((prev) => ({
+                                                  ...prev,
+                                                  [variant.name]: option.name,
+                                                }));
+                                                setVariantPrices((prev) => ({
+                                                  ...prev,
+                                                  [variant.name]: option.price,
+                                                }));
+                                              }}
+                                            >
+                                              {option.name}{priceLabel}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+
+                          <div className="space-y-2">
+                            <Label>Cantidad</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={manualQty}
+                              onChange={(e) => setManualQty(e.target.value)}
+                            />
+                          </div>
+                        </>
                       )}
 
                       {selectedProduct === "custom" && (
