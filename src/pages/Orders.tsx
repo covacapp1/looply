@@ -4,7 +4,10 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardList, Clock, CheckCircle2, XCircle, Copy, ExternalLink } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ClipboardList, Clock, CheckCircle2, XCircle, Copy, ExternalLink, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOrdersByMerchant, updateOrderStatus, createSale, createCuentaCorriente } from "@/services/supabase";
 import type { Order } from "@/types";
@@ -16,16 +19,34 @@ const STATUS_CONFIG = {
   cancelled: { label: "Cancelado", icon: XCircle, color: "bg-red-100 text-red-700" },
 };
 
+const DEFAULT_MESSAGE = "Hola {cliente}, gracias por tu compra. Tu pedido #{pedido} fue recibido y estará listo en aproximadamente {tiempo} minutos.";
+
+function getStorageKey(userId: string) {
+  return `looply_order_message_${userId}`;
+}
+
+function loadMessageTemplate(userId: string): string {
+  const stored = localStorage.getItem(getStorageKey(userId));
+  return stored || DEFAULT_MESSAGE;
+}
+
+function saveMessageTemplate(userId: string, message: string) {
+  localStorage.setItem(getStorageKey(userId), message);
+}
+
 export default function OrdersPage() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [msgDialogOpen, setMsgDialogOpen] = useState(false);
+  const [messageTemplate, setMessageTemplate] = useState("");
 
   const loadOrders = useCallback(async () => {
     if (!user) return;
     const data = await getOrdersByMerchant(user.id);
     setOrders(data);
+    setMessageTemplate(loadMessageTemplate(user.id));
     setLoading(false);
   }, [user]);
 
@@ -34,6 +55,31 @@ export default function OrdersPage() {
     const interval = setInterval(loadOrders, 10000);
     return () => clearInterval(interval);
   }, [loadOrders]);
+
+  function handleSaveMessage() {
+    if (!user) return;
+    saveMessageTemplate(user.id, messageTemplate);
+    setMsgDialogOpen(false);
+    toast.success("Mensaje guardado");
+  }
+
+  function handleSendConfirmation(order: Order) {
+    const phone = order.customerPhone?.replace(/\D/g, "");
+    if (!phone) {
+      toast.error("El cliente no tiene número de WhatsApp");
+      return;
+    }
+
+    const message = messageTemplate
+      .replace("{cliente}", order.customerName || "Cliente")
+      .replace("{pedido}", order.id.slice(0, 8))
+      .replace("{tiempo}", "30")
+      .replace("{total}", `$${order.total.toLocaleString("es-AR")}`);
+
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+    toast.success("Abriendo WhatsApp...");
+  }
 
   async function handleConfirm(order: Order) {
     if (!user) return;
@@ -109,10 +155,16 @@ export default function OrdersPage() {
         title="Pedidos"
         description="Gestioná los pedidos de tus clientes"
         actions={
-          <Button variant="outline" size="sm" onClick={copyShareLink}>
-            <Copy className="h-4 w-4 mr-2" />
-            Copiar Link
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setMsgDialogOpen(true)}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Mensaje al cliente
+            </Button>
+            <Button variant="outline" size="sm" onClick={copyShareLink}>
+              <Copy className="h-4 w-4 mr-2" />
+              Copiar Link
+            </Button>
+          </div>
         }
       />
 
@@ -221,7 +273,7 @@ export default function OrdersPage() {
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Button
                             size="sm"
                             onClick={() => handleConfirm(order)}
@@ -237,6 +289,14 @@ export default function OrdersPage() {
                             disabled={updatingId === order.id}
                           >
                             Pendiente
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleSendConfirmation(order)}
+                          >
+                            <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                            Enviar confirmación
                           </Button>
                           <Button
                             size="sm"
@@ -317,6 +377,36 @@ export default function OrdersPage() {
           )}
         </div>
       )}
+
+      {/* Message Template Dialog */}
+      <Dialog open={msgDialogOpen} onOpenChange={setMsgDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mensaje al cliente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label>Plantilla del mensaje</Label>
+              <Textarea
+                value={messageTemplate}
+                onChange={(e) => setMessageTemplate(e.target.value)}
+                rows={5}
+                placeholder="Escribí el mensaje..."
+              />
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p><strong>Variables disponibles:</strong></p>
+                <p>{"{cliente}"} — Nombre del cliente</p>
+                <p>{"{pedido}"} — Número del pedido</p>
+                <p>{"{tiempo}"} — Tiempo estimado (minutos)</p>
+                <p>{"{total}"} — Total del pedido</p>
+              </div>
+            </div>
+            <Button onClick={handleSaveMessage} className="w-full">
+              Guardar mensaje
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
