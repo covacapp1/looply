@@ -251,9 +251,7 @@ export default function CajaPage() {
                                     </div>
                                   ))}
                                 </div>
-                              );
-                            }
-                            return null;
+                            );
                           })()}
 
                           <div className="space-y-2">
