@@ -213,8 +213,8 @@ export default function CajaPage() {
                           {/* Variant selectors */}
                           {(() => {
                             const item = menuItems.find((m) => m.id === selectedProduct);
-                            if (item?.variants?.length > 0) {
-                              return (
+                            if (!item || !item.variants || item.variants.length === 0) return null;
+                            return (
                                 <div className="space-y-3">
                                   {item.variants.map((variant: ProductVariant) => (
                                     <div key={variant.name}>
