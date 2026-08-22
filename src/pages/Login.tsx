@@ -67,6 +67,8 @@ export default function LoginPage() {
           instagram: "",
           facebook: "",
           whatsapp: "",
+          orderMessage: "",
+          orderTime: "30",
         });
       }
       setError("Cuenta creada. Iniciá sesión.");

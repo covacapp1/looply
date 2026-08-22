@@ -17,6 +17,7 @@ const defaultSettings: BusinessSettings = {
   name: "", slug: "", description: "", phone: "", email: "",
   address: "", city: "", country: "", website: "",
   instagram: "", facebook: "", whatsapp: "",
+  orderMessage: "", orderTime: "30",
 };
 
 export default function SettingsPage() {
