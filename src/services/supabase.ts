@@ -818,6 +818,8 @@ export interface BusinessSettings {
   instagram: string;
   facebook: string;
   whatsapp: string;
+  orderMessage: string;
+  orderTime: string;
 }
 
 const defaultSettings: BusinessSettings = {
@@ -833,6 +835,8 @@ const defaultSettings: BusinessSettings = {
   instagram: "",
   facebook: "",
   whatsapp: "",
+  orderMessage: "Hola {cliente}, gracias por tu compra. Tu pedido #{pedido} fue recibido y estará listo en aproximadamente {tiempo} minutos.",
+  orderTime: "30",
 };
 
 export async function getBusinessSettings(userId: string): Promise<BusinessSettings> {
@@ -865,6 +869,8 @@ export async function getBusinessSettings(userId: string): Promise<BusinessSetti
     instagram: data.instagram || "",
     facebook: data.facebook || "",
     whatsapp: data.whatsapp || "",
+    orderMessage: data.order_message || defaultSettings.orderMessage,
+    orderTime: data.order_time || defaultSettings.orderTime,
   };
 
   localStorage.setItem("businessSettings", JSON.stringify(settings));
@@ -893,6 +899,8 @@ export async function saveBusinessSettings(userId: string, settings: BusinessSet
       instagram: settings.instagram,
       facebook: settings.facebook,
       whatsapp: settings.whatsapp,
+      order_message: settings.orderMessage,
+      order_time: settings.orderTime,
       updated_at: new Date().toISOString(),
     }, { onConflict: "user_id" });
 

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ClipboardList, Clock, CheckCircle2, XCircle, Copy, ExternalLink, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getOrdersByMerchant, updateOrderStatus, createSale, createCuentaCorriente } from "@/services/supabase";
+import { getOrdersByMerchant, updateOrderStatus, createSale, createCuentaCorriente, getBusinessSettings, saveBusinessSettings } from "@/services/supabase";
 import type { Order } from "@/types";
 import { toast } from "sonner";
 
@@ -22,47 +22,22 @@ const STATUS_CONFIG = {
 
 const DEFAULT_MESSAGE = "Hola {cliente}, gracias por tu compra. Tu pedido #{pedido} fue recibido y estará listo en aproximadamente {tiempo} minutos.";
 
-function getStorageKey(userId: string) {
-  return `looply_order_message_${userId}`;
-}
-
-function loadMessageTemplate(userId: string): string {
-  const stored = localStorage.getItem(getStorageKey(userId));
-  return stored || DEFAULT_MESSAGE;
-}
-
-function saveMessageTemplate(userId: string, message: string) {
-  localStorage.setItem(getStorageKey(userId), message);
-}
-
-function getTimeStorageKey(userId: string) {
-  return `looply_order_time_${userId}`;
-}
-
-function loadEstimatedTime(userId: string): string {
-  const stored = localStorage.getItem(getTimeStorageKey(userId));
-  return stored || "30";
-}
-
-function saveEstimatedTime(userId: string, time: string) {
-  localStorage.setItem(getTimeStorageKey(userId), time);
-}
-
 export default function OrdersPage() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [msgDialogOpen, setMsgDialogOpen] = useState(false);
-  const [messageTemplate, setMessageTemplate] = useState("");
+  const [messageTemplate, setMessageTemplate] = useState(DEFAULT_MESSAGE);
   const [estimatedTime, setEstimatedTime] = useState("30");
 
   const loadOrders = useCallback(async () => {
     if (!user) return;
     const data = await getOrdersByMerchant(user.id);
     setOrders(data);
-    setMessageTemplate(loadMessageTemplate(user.id));
-    setEstimatedTime(loadEstimatedTime(user.id));
+    const settings = await getBusinessSettings(user.id);
+    setMessageTemplate(settings.orderMessage || DEFAULT_MESSAGE);
+    setEstimatedTime(settings.orderTime || "30");
     setLoading(false);
   }, [user]);
 
@@ -72,12 +47,20 @@ export default function OrdersPage() {
     return () => clearInterval(interval);
   }, [loadOrders]);
 
-  function handleSaveMessage() {
+  async function handleSaveMessage() {
     if (!user) return;
-    saveMessageTemplate(user.id, messageTemplate);
-    saveEstimatedTime(user.id, estimatedTime);
-    setMsgDialogOpen(false);
-    toast.success("Mensaje guardado");
+    const settings = await getBusinessSettings(user.id);
+    const updated = await saveBusinessSettings(user.id, {
+      ...settings,
+      orderMessage: messageTemplate,
+      orderTime: estimatedTime,
+    });
+    if (updated) {
+      setMsgDialogOpen(false);
+      toast.success("Mensaje guardado en la nube");
+    } else {
+      toast.error("Error al guardar");
+    }
   }
 
   function handleSendConfirmation(order: Order) {
