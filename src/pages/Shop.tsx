@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Phone, User, MapPin, StickyNote, Send, Store, ChevronDown, ChevronUp } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Phone, User, MapPin, StickyNote, Send, Store, ChevronDown, ChevronUp, Clock } from "lucide-react";
 import { findShopCustomer, createShopCustomer, getMenuItems, createOrder, createSale, getBusinessSettings } from "@/services/supabase";
 import type { MenuItem, ShopCustomer, ProductVariant } from "@/types";
 
@@ -430,7 +430,7 @@ export default function ShopPage() {
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
-                              {(hasVariants || item.extras?.length > 0) && (
+                              {hasVariants && (
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -438,13 +438,13 @@ export default function ShopPage() {
                                   onClick={() => {
                                     setExpandedItem(isExpanded ? null : item.id);
                                     setSelectedVariants({});
-                                    setSelectedExtras([]);
+                                    setSelectedVariants({});
                                   }}
                                 >
                                   {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                 </Button>
                               )}
-                              {!hasVariants && !item.extras?.length && (
+                              {!hasVariants && (
                                 <Button
                                   size="sm"
                                   className="h-8 w-8 p-0"
@@ -457,7 +457,7 @@ export default function ShopPage() {
                           </div>
 
                           {/* Variant and Extras selectors */}
-                          {isExpanded && (hasVariants || item.extras?.length > 0) && (
+                              {isExpanded && hasVariants && (
                             <div className="mt-3 pt-3 border-t border-border space-y-3">
                               {item.variants.map((variant: ProductVariant) => (
                                 <div key={variant.name}>

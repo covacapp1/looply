@@ -69,11 +69,6 @@ export interface Activity {
   timestamp: Date;
 }
 
-export interface ProductVariant {
-  name: string;
-  options: string[];
-}
-
 export interface ProductVariantOption {
   name: string;
   price: number;
