@@ -389,7 +389,7 @@ export default function ShopPage() {
                                   onClick={() => {
                                     setExpandedItem(isExpanded ? null : item.id);
                                     setSelectedVariants({});
-                                    setExcludedExtras([]);
+                                    setSelectedExtras([]);
                                   }}
                                 >
                                   {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
