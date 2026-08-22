@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ClipboardList, Clock, CheckCircle2, XCircle, Copy, ExternalLink, MessageSquare } from "lucide-react";
@@ -34,6 +35,19 @@ function saveMessageTemplate(userId: string, message: string) {
   localStorage.setItem(getStorageKey(userId), message);
 }
 
+function getTimeStorageKey(userId: string) {
+  return `looply_order_time_${userId}`;
+}
+
+function loadEstimatedTime(userId: string): string {
+  const stored = localStorage.getItem(getTimeStorageKey(userId));
+  return stored || "30";
+}
+
+function saveEstimatedTime(userId: string, time: string) {
+  localStorage.setItem(getTimeStorageKey(userId), time);
+}
+
 export default function OrdersPage() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -41,12 +55,14 @@ export default function OrdersPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [msgDialogOpen, setMsgDialogOpen] = useState(false);
   const [messageTemplate, setMessageTemplate] = useState("");
+  const [estimatedTime, setEstimatedTime] = useState("30");
 
   const loadOrders = useCallback(async () => {
     if (!user) return;
     const data = await getOrdersByMerchant(user.id);
     setOrders(data);
     setMessageTemplate(loadMessageTemplate(user.id));
+    setEstimatedTime(loadEstimatedTime(user.id));
     setLoading(false);
   }, [user]);
 
@@ -59,6 +75,7 @@ export default function OrdersPage() {
   function handleSaveMessage() {
     if (!user) return;
     saveMessageTemplate(user.id, messageTemplate);
+    saveEstimatedTime(user.id, estimatedTime);
     setMsgDialogOpen(false);
     toast.success("Mensaje guardado");
   }
@@ -73,7 +90,7 @@ export default function OrdersPage() {
     const message = messageTemplate
       .replace("{cliente}", order.customerName || "Cliente")
       .replace("{pedido}", order.id.slice(0, 8))
-      .replace("{tiempo}", "30")
+      .replace("{tiempo}", estimatedTime)
       .replace("{total}", `$${order.total.toLocaleString("es-AR")}`);
 
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
@@ -385,6 +402,16 @@ export default function OrdersPage() {
             <DialogTitle>Mensaje al cliente</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label>Tiempo estimado (minutos)</Label>
+              <Input
+                type="number"
+                min="1"
+                value={estimatedTime}
+                onChange={(e) => setEstimatedTime(e.target.value)}
+                placeholder="30"
+              />
+            </div>
             <div className="space-y-2">
               <Label>Plantilla del mensaje</Label>
               <Textarea
