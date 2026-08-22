@@ -17,6 +17,7 @@ interface CartItem {
   item: MenuItem;
   quantity: number;
   selectedVariants: Record<string, string>;
+  excludedExtras: string[];
 }
 
 export default function ShopPage() {
@@ -32,6 +33,7 @@ export default function ShopPage() {
   // Variant selection state
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+  const [excludedExtras, setExcludedExtras] = useState<string[]>([]);
 
   // Registration form
   const [regName, setRegName] = useState("");
@@ -84,21 +86,23 @@ export default function ShopPage() {
 
   function addToCart(item: MenuItem) {
     const variants = item.variants?.length > 0 ? selectedVariants : {};
+    const excluded = item.extras?.length > 0 ? excludedExtras : [];
     setCart((prev) => {
-      const key = `${item.id}-${JSON.stringify(variants)}`;
+      const key = `${item.id}-${JSON.stringify(variants)}-${JSON.stringify(excluded)}`;
       const existing = prev.find((c) => {
-        const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}`;
+        const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}-${JSON.stringify(c.excludedExtras)}`;
         return cKey === key;
       });
       if (existing) {
         return prev.map((c) => {
-          const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}`;
+          const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}-${JSON.stringify(c.excludedExtras)}`;
           return cKey === key ? { ...c, quantity: c.quantity + 1 } : c;
         });
       }
-      return [...prev, { item, quantity: 1, selectedVariants: variants }];
+      return [...prev, { item, quantity: 1, selectedVariants: variants, excludedExtras: excluded }];
     });
     setSelectedVariants({});
+    setExcludedExtras([]);
     setExpandedItem(null);
   }
 
@@ -135,6 +139,7 @@ export default function ShopPage() {
         price: c.item.price,
         quantity: c.quantity,
         variants: c.selectedVariants,
+        excludedExtras: c.excludedExtras,
       })),
       total: getCartTotal(),
     });
@@ -370,7 +375,7 @@ export default function ShopPage() {
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
-                              {hasVariants && (
+                              {(hasVariants || item.extras?.length > 0) && (
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -378,12 +383,13 @@ export default function ShopPage() {
                                   onClick={() => {
                                     setExpandedItem(isExpanded ? null : item.id);
                                     setSelectedVariants({});
+                                    setExcludedExtras([]);
                                   }}
                                 >
                                   {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                 </Button>
                               )}
-                              {!hasVariants && (
+                              {!hasVariants && !item.extras?.length && (
                                 <Button
                                   size="sm"
                                   className="h-8 w-8 p-0"
@@ -395,8 +401,8 @@ export default function ShopPage() {
                             </div>
                           </div>
 
-                          {/* Variant selectors */}
-                          {hasVariants && isExpanded && (
+                          {/* Variant and Extras selectors */}
+                          {isExpanded && (hasVariants || item.extras?.length > 0) && (
                             <div className="mt-3 pt-3 border-t border-border space-y-3">
                               {item.variants.map((variant: ProductVariant) => (
                                 <div key={variant.name}>
@@ -422,11 +428,40 @@ export default function ShopPage() {
                                   </div>
                                 </div>
                               ))}
+
+                              {item.extras?.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Ingredientes (quitá los que no quieras)</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {item.extras.map((extra) => (
+                                      <button
+                                        key={extra}
+                                        type="button"
+                                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                                          !excludedExtras.includes(extra)
+                                            ? "bg-emerald-100 text-emerald-700"
+                                            : "bg-muted text-muted-foreground line-through"
+                                        }`}
+                                        onClick={() => {
+                                          setExcludedExtras((prev) =>
+                                            prev.includes(extra)
+                                              ? prev.filter((e) => e !== extra)
+                                              : [...prev, extra]
+                                          );
+                                        }}
+                                      >
+                                        {extra}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
                               <Button
                                 size="sm"
                                 className="w-full mt-2"
                                 onClick={() => addToCart(item)}
-                                disabled={!item.variants.every((v: ProductVariant) => selectedVariants[v.name])}
+                                disabled={hasVariants && !item.variants.every((v: ProductVariant) => selectedVariants[v.name])}
                               >
                                 <Plus className="h-3 w-3 mr-1" />
                                 Agregar
@@ -502,6 +537,15 @@ export default function ShopPage() {
                               {Object.entries(c.selectedVariants).map(([key, value]) => (
                                 <Badge key={key} variant="secondary" className="text-[10px]">
                                   {key}: {value}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          {c.excludedExtras.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {c.excludedExtras.map((extra) => (
+                                <Badge key={extra} variant="destructive" className="text-[10px]">
+                                  Sin {extra}
                                 </Badge>
                               ))}
                             </div>

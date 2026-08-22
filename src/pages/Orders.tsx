@@ -206,6 +206,11 @@ export default function OrdersPage() {
                                   {Object.entries(item.variants).map(([key, value]) => `${key}: ${value}`).join(" | ")}
                                 </p>
                               )}
+                              {item.excludedExtras && item.excludedExtras.length > 0 && (
+                                <p className="text-xs text-destructive ml-4">
+                                  Sin: {item.excludedExtras.join(", ")}
+                                </p>
+                              )}
                             </div>
                           ))}
                         </div>

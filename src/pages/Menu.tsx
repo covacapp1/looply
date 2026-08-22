@@ -77,6 +77,10 @@ export default function MenuPage() {
   const [newVariantOptions, setNewVariantOptions] = useState("");
   const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
 
+  // Extras
+  const [extras, setExtras] = useState<string[]>([]);
+  const [newExtra, setNewExtra] = useState("");
+
   // New category
   const [newCatName, setNewCatName] = useState("");
 
@@ -102,6 +106,7 @@ export default function MenuPage() {
     setCategory(categories[0] || "General");
     setImageUrl("");
     setVariants([]);
+    setExtras([]);
     setDialogOpen(true);
   }
 
@@ -114,6 +119,7 @@ export default function MenuPage() {
     setCategory(item.category);
     setImageUrl(item.imageUrl || "");
     setVariants(item.variants || []);
+    setExtras(item.extras || []);
     setDialogOpen(true);
   }
 
@@ -158,6 +164,7 @@ export default function MenuPage() {
         isAvailable: editingItem.isAvailable,
         imageUrl,
         variants,
+        extras,
       });
       if (updated) {
         setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
@@ -174,6 +181,7 @@ export default function MenuPage() {
         isAvailable: true,
         imageUrl,
         variants,
+        extras,
       });
       if (created) {
         setItems((prev) => [...prev, created]);
@@ -495,6 +503,58 @@ export default function MenuPage() {
               ) : (
                 <p className="text-xs text-muted-foreground">Creá variantes desde el botón "Variantes" arriba</p>
               )}
+            </div>
+
+            {/* Extras (ingredientes opcionales) */}
+            <div className="space-y-2">
+              <Label>Ingredientes opcionales</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Ej: Cheddar, Bacon, Lechuga"
+                  value={newExtra}
+                  onChange={(e) => setNewExtra(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newExtra.trim()) {
+                      e.preventDefault();
+                      if (!extras.includes(newExtra.trim())) {
+                        setExtras([...extras, newExtra.trim()]);
+                      }
+                      setNewExtra("");
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (newExtra.trim() && !extras.includes(newExtra.trim())) {
+                      setExtras([...extras, newExtra.trim()]);
+                      setNewExtra("");
+                    }
+                  }}
+                  disabled={!newExtra.trim()}
+                >
+                  <PlusCircle className="h-4 w-4" />
+                </Button>
+              </div>
+              {extras.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {extras.map((extra) => (
+                    <Badge key={extra} variant="secondary" className="text-xs gap-1">
+                      {extra}
+                      <button
+                        type="button"
+                        className="ml-1 hover:text-destructive"
+                        onClick={() => setExtras(extras.filter((e) => e !== extra))}
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">El cliente podrá quitar los que no quiera</p>
             </div>
 
             <Button className="w-full" onClick={handleSave} disabled={saving || !name.trim() || !price}>

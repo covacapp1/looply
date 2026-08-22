@@ -371,6 +371,7 @@ export async function getMenuItems(merchantId: string): Promise<MenuItem[]> {
     isAvailable: m.is_available,
     imageUrl: m.image_url || "",
     variants: m.variants || [],
+    extras: m.extras || [],
     createdAt: new Date(m.created_at),
   }));
 }
@@ -390,6 +391,7 @@ export async function createMenuItem(item: Omit<MenuItem, "id" | "createdAt">): 
       is_available: item.isAvailable,
       image_url: item.imageUrl || "",
       variants: item.variants || [],
+      extras: item.extras || [],
     })
     .select()
     .single();
@@ -410,6 +412,7 @@ export async function createMenuItem(item: Omit<MenuItem, "id" | "createdAt">): 
     isAvailable: data.is_available,
     imageUrl: data.image_url || "",
     variants: data.variants || [],
+    extras: data.extras || [],
     createdAt: new Date(data.created_at),
   };
 }
@@ -428,6 +431,7 @@ export async function updateMenuItem(id: string, updates: Partial<MenuItem>): Pr
       is_available: updates.isAvailable,
       image_url: updates.imageUrl,
       variants: updates.variants,
+      extras: updates.extras,
     })
     .eq("id", id)
     .select()
@@ -449,6 +453,7 @@ export async function updateMenuItem(id: string, updates: Partial<MenuItem>): Pr
     isAvailable: data.is_available,
     imageUrl: data.image_url || "",
     variants: data.variants || [],
+    extras: data.extras || [],
     createdAt: new Date(data.created_at),
   };
 }
@@ -599,7 +604,7 @@ export async function getOrdersByMerchant(merchantId: string): Promise<Order[]> 
 export async function createOrder(order: {
   merchantId: string;
   customerId: string;
-  items: { menuItemId: string; name: string; price: number; quantity: number; variants?: Record<string, string> }[];
+  items: { menuItemId: string; name: string; price: number; quantity: number; variants?: Record<string, string>; excludedExtras?: string[] }[];
   total: number;
 }): Promise<Order | null> {
   if (!isSupabaseConfigured() || !supabase) return null;

@@ -85,6 +85,7 @@ export interface MenuItem {
   isAvailable: boolean;
   imageUrl: string;
   variants: ProductVariant[];
+  extras: string[];
   createdAt: Date;
 }
 
@@ -104,6 +105,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
   variants?: Record<string, string>;
+  excludedExtras?: string[];
 }
 
 export interface Order {
