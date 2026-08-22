@@ -604,7 +604,7 @@ export async function getOrdersByMerchant(merchantId: string): Promise<Order[]> 
 export async function createOrder(order: {
   merchantId: string;
   customerId: string;
-  items: { menuItemId: string; name: string; price: number; quantity: number; variants?: Record<string, string>; excludedExtras?: string[] }[];
+  items: { menuItemId: string; name: string; price: number; quantity: number; variants?: Record<string, string>; selectedExtras?: string[] }[];
   total: number;
 }): Promise<Order | null> {
   if (!isSupabaseConfigured() || !supabase) return null;

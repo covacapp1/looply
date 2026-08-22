@@ -13,7 +13,7 @@ import { UtensilsCrossed, PlusCircle, Trash2, Eye, EyeOff, Camera, X, Tag, ListP
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { getMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from "@/services/supabase";
-import type { MenuItem, ProductVariant } from "@/types";
+import type { MenuItem, ProductVariant, ProductExtra } from "@/types";
 import { toast } from "sonner";
 
 const DEFAULT_CATEGORIES = ["General", "Entradas", "Platos", "Bebidas", "Postres", "Otros"];
@@ -78,8 +78,9 @@ export default function MenuPage() {
   const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
 
   // Extras
-  const [extras, setExtras] = useState<string[]>([]);
-  const [newExtra, setNewExtra] = useState("");
+  const [extras, setExtras] = useState<ProductExtra[]>([]);
+  const [newExtraName, setNewExtraName] = useState("");
+  const [newExtraPrice, setNewExtraPrice] = useState("");
 
   // New category
   const [newCatName, setNewCatName] = useState("");
@@ -505,35 +506,40 @@ export default function MenuPage() {
               )}
             </div>
 
-            {/* Extras (ingredientes opcionales) */}
+            {/* Extras (agregados opcionales con precio) */}
             <div className="space-y-2">
-              <Label>Ingredientes opcionales</Label>
+              <Label>Agregados opcionales</Label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Ej: Cheddar, Bacon, Lechuga"
-                  value={newExtra}
-                  onChange={(e) => setNewExtra(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && newExtra.trim()) {
-                      e.preventDefault();
-                      if (!extras.includes(newExtra.trim())) {
-                        setExtras([...extras, newExtra.trim()]);
-                      }
-                      setNewExtra("");
-                    }
-                  }}
+                  placeholder="Nombre"
+                  value={newExtraName}
+                  onChange={(e) => setNewExtraName(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="$0 = FREE"
+                  value={newExtraPrice}
+                  onChange={(e) => setNewExtraPrice(e.target.value)}
+                  className="w-24"
                 />
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    if (newExtra.trim() && !extras.includes(newExtra.trim())) {
-                      setExtras([...extras, newExtra.trim()]);
-                      setNewExtra("");
+                    if (newExtraName.trim()) {
+                      setExtras([...extras, {
+                        name: newExtraName.trim(),
+                        price: parseFloat(newExtraPrice) || 0,
+                      }]);
+                      setNewExtraName("");
+                      setNewExtraPrice("");
                     }
                   }}
-                  disabled={!newExtra.trim()}
+                  disabled={!newExtraName.trim()}
                 >
                   <PlusCircle className="h-4 w-4" />
                 </Button>
@@ -541,12 +547,12 @@ export default function MenuPage() {
               {extras.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {extras.map((extra) => (
-                    <Badge key={extra} variant="secondary" className="text-xs gap-1">
-                      {extra}
+                    <Badge key={extra.name} variant="secondary" className="text-xs gap-1">
+                      {extra.name} {extra.price > 0 ? `+$${extra.price}` : "FREE"}
                       <button
                         type="button"
                         className="ml-1 hover:text-destructive"
-                        onClick={() => setExtras(extras.filter((e) => e !== extra))}
+                        onClick={() => setExtras(extras.filter((e) => e.name !== extra.name))}
                       >
                         ×
                       </button>
@@ -554,7 +560,7 @@ export default function MenuPage() {
                   ))}
                 </div>
               )}
-              <p className="text-xs text-muted-foreground">El cliente podrá quitar los que no quiera</p>
+              <p className="text-xs text-muted-foreground">Precio 0 = gratis. El cliente elige qué agregar.</p>
             </div>
 
             <Button className="w-full" onClick={handleSave} disabled={saving || !name.trim() || !price}>

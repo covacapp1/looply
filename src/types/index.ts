@@ -74,6 +74,11 @@ export interface ProductVariant {
   options: string[];
 }
 
+export interface ProductExtra {
+  name: string;
+  price: number;
+}
+
 export interface MenuItem {
   id: string;
   merchantId: string;
@@ -85,7 +90,7 @@ export interface MenuItem {
   isAvailable: boolean;
   imageUrl: string;
   variants: ProductVariant[];
-  extras: string[];
+  extras: ProductExtra[];
   createdAt: Date;
 }
 
@@ -105,7 +110,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
   variants?: Record<string, string>;
-  excludedExtras?: string[];
+  selectedExtras?: string[];
 }
 
 export interface Order {

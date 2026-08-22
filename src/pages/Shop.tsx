@@ -17,7 +17,7 @@ interface CartItem {
   item: MenuItem;
   quantity: number;
   selectedVariants: Record<string, string>;
-  excludedExtras: string[];
+  selectedExtras: string[];
 }
 
 export default function ShopPage() {
@@ -33,7 +33,7 @@ export default function ShopPage() {
   // Variant selection state
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
-  const [excludedExtras, setExcludedExtras] = useState<string[]>([]);
+  const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
 
   // Registration form
   const [regName, setRegName] = useState("");
@@ -86,23 +86,23 @@ export default function ShopPage() {
 
   function addToCart(item: MenuItem) {
     const variants = item.variants?.length > 0 ? selectedVariants : {};
-    const excluded = item.extras?.length > 0 ? excludedExtras : [];
+    const extras = item.extras?.length > 0 ? selectedExtras : [];
     setCart((prev) => {
-      const key = `${item.id}-${JSON.stringify(variants)}-${JSON.stringify(excluded)}`;
+      const key = `${item.id}-${JSON.stringify(variants)}-${JSON.stringify(extras)}`;
       const existing = prev.find((c) => {
-        const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}-${JSON.stringify(c.excludedExtras)}`;
+        const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}-${JSON.stringify(c.selectedExtras)}`;
         return cKey === key;
       });
       if (existing) {
         return prev.map((c) => {
-          const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}-${JSON.stringify(c.excludedExtras)}`;
+          const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}-${JSON.stringify(c.selectedExtras)}`;
           return cKey === key ? { ...c, quantity: c.quantity + 1 } : c;
         });
       }
-      return [...prev, { item, quantity: 1, selectedVariants: variants, excludedExtras: excluded }];
+      return [...prev, { item, quantity: 1, selectedVariants: variants, selectedExtras: extras }];
     });
     setSelectedVariants({});
-    setExcludedExtras([]);
+    setSelectedExtras([]);
     setExpandedItem(null);
   }
 
@@ -119,7 +119,13 @@ export default function ShopPage() {
   }
 
   function getCartTotal() {
-    return cart.reduce((sum, c) => sum + c.item.price * c.quantity, 0);
+    return cart.reduce((sum, c) => {
+      const extrasPrice = c.selectedExtras.reduce((eSum, extraName) => {
+        const extra = c.item.extras?.find((e) => e.name === extraName);
+        return eSum + (extra?.price || 0);
+      }, 0);
+      return sum + (c.item.price + extrasPrice) * c.quantity;
+    }, 0);
   }
 
   function getCartItemCount() {
@@ -139,7 +145,7 @@ export default function ShopPage() {
         price: c.item.price,
         quantity: c.quantity,
         variants: c.selectedVariants,
-        excludedExtras: c.excludedExtras,
+        selectedExtras: c.selectedExtras,
       })),
       total: getCartTotal(),
     });
@@ -431,28 +437,32 @@ export default function ShopPage() {
 
                               {item.extras?.length > 0 && (
                                 <div>
-                                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Ingredientes (quitá los que no quieras)</p>
+                                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Agregados</p>
                                   <div className="flex flex-wrap gap-1.5">
-                                    {item.extras.map((extra) => (
-                                      <button
-                                        key={extra}
-                                        type="button"
-                                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                                          !excludedExtras.includes(extra)
-                                            ? "bg-emerald-100 text-emerald-700"
-                                            : "bg-muted text-muted-foreground line-through"
-                                        }`}
-                                        onClick={() => {
-                                          setExcludedExtras((prev) =>
-                                            prev.includes(extra)
-                                              ? prev.filter((e) => e !== extra)
-                                              : [...prev, extra]
-                                          );
-                                        }}
-                                      >
-                                        {extra}
-                                      </button>
-                                    ))}
+                                    {item.extras.map((extra) => {
+                                      const isSelected = selectedExtras.includes(extra.name);
+                                      const priceLabel = extra.price > 0 ? ` +$${extra.price.toLocaleString("es-AR")}` : " FREE";
+                                      return (
+                                        <button
+                                          key={extra.name}
+                                          type="button"
+                                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                                            isSelected
+                                              ? "bg-primary text-primary-foreground"
+                                              : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                          }`}
+                                          onClick={() => {
+                                            setSelectedExtras((prev) =>
+                                              prev.includes(extra.name)
+                                                ? prev.filter((e) => e !== extra.name)
+                                                : [...prev, extra.name]
+                                            );
+                                          }}
+                                        >
+                                          {extra.name}{priceLabel}
+                                        </button>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               )}
@@ -541,13 +551,16 @@ export default function ShopPage() {
                               ))}
                             </div>
                           )}
-                          {c.excludedExtras.length > 0 && (
+                          {c.selectedExtras.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {c.excludedExtras.map((extra) => (
-                                <Badge key={extra} variant="destructive" className="text-[10px]">
-                                  Sin {extra}
-                                </Badge>
-                              ))}
+                              {c.selectedExtras.map((extraName) => {
+                                const extra = c.item.extras?.find((e) => e.name === extraName);
+                                return (
+                                  <Badge key={extraName} variant="secondary" className="text-[10px]">
+                                    {extraName}{extra?.price ? ` +$${extra.price}` : " FREE"}
+                                  </Badge>
+                                );
+                              })}
                             </div>
                           )}
                           <p className="text-xs text-muted-foreground mt-1">
