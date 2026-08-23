@@ -146,15 +146,18 @@ export default function MenuPage() {
 
   async function handleSave() {
     if (!user || !name.trim()) return;
-    if (variants.length === 0 && !price) return;
+    if (variants.length === 0 && (!price || parseFloat(price) <= 0)) return;
     setSaving(true);
+
+    const productPrice = variants.length > 0 ? 0 : parseFloat(price) || 0;
+    const productCost = variants.length > 0 ? 0 : parseFloat(cost) || 0;
 
     if (editingItem) {
       const updated = await updateMenuItem(editingItem.id, {
         name: name.trim(),
         description: description.trim(),
-        price: parseFloat(price),
-        cost: parseFloat(cost) || 0,
+        price: productPrice,
+        cost: productCost,
         category,
         isAvailable: editingItem.isAvailable,
         imageUrl,
@@ -169,8 +172,8 @@ export default function MenuPage() {
         merchantId: user.id,
         name: name.trim(),
         description: description.trim(),
-        price: parseFloat(price),
-        cost: parseFloat(cost) || 0,
+        price: productPrice,
+        cost: productCost,
         category,
         isAvailable: true,
         imageUrl,
