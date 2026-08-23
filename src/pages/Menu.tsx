@@ -39,7 +39,16 @@ function saveCategories(userId: string, cats: string[]) {
 
 function loadVariantTemplates(userId: string): ProductVariant[] {
   const stored = localStorage.getItem(getVariantStorageKey(userId));
-  return stored ? JSON.parse(stored) : [];
+  if (!stored) return [];
+  const parsed = JSON.parse(stored);
+  return parsed.map((v: any) => ({
+    name: v.name,
+    options: v.options.map((o: any) =>
+      typeof o === "string"
+        ? { name: o, price: 0, cost: 0 }
+        : { name: o.name, price: o.price || 0, cost: o.cost || 0 }
+    ),
+  }));
 }
 
 function saveVariantTemplates(userId: string, variants: ProductVariant[]) {

@@ -1,5 +1,16 @@
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import type { LoyaltyReward, Customer, StampHistory, MenuItem, ShopCustomer, Order, Sale, DailyRegister, CuentaCorriente } from "@/types";
+import type { LoyaltyReward, Customer, StampHistory, MenuItem, ShopCustomer, Order, Sale, DailyRegister, CuentaCorriente, ProductVariant } from "@/types";
+
+function migrateVariants(variants: any[]): ProductVariant[] {
+  return (variants || []).map((v: any) => ({
+    name: v.name,
+    options: v.options.map((o: any) =>
+      typeof o === "string"
+        ? { name: o, price: 0, cost: 0 }
+        : { name: o.name, price: o.price || 0, cost: o.cost || 0 }
+    ),
+  }));
+}
 
 // Rewards
 export async function getRewards(): Promise<LoyaltyReward[]> {
@@ -370,7 +381,7 @@ export async function getMenuItems(merchantId: string): Promise<MenuItem[]> {
     category: m.category || "General",
     isAvailable: m.is_available,
     imageUrl: m.image_url || "",
-    variants: m.variants || [],
+    variants: migrateVariants(m.variants),
     createdAt: new Date(m.created_at),
   }));
 }
@@ -409,7 +420,7 @@ export async function createMenuItem(item: Omit<MenuItem, "id" | "createdAt">): 
     category: data.category,
     isAvailable: data.is_available,
     imageUrl: data.image_url || "",
-    variants: data.variants || [],
+    variants: migrateVariants(data.variants),
     createdAt: new Date(data.created_at),
   };
 }
@@ -448,7 +459,7 @@ export async function updateMenuItem(id: string, updates: Partial<MenuItem>): Pr
     category: data.category,
     isAvailable: data.is_available,
     imageUrl: data.image_url || "",
-    variants: data.variants || [],
+    variants: migrateVariants(data.variants),
     createdAt: new Date(data.created_at),
   };
 }
