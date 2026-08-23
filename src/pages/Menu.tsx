@@ -674,7 +674,7 @@ export default function MenuPage() {
                 </div>
                 <div className="flex gap-2">
                   {editingVariantIndex !== null && (
-                    <Button variant="outline" onClick={() => { setEditingVariantIndex(null); setNewVariantName(""); setNewVariantOptions([{ name: "", price: "" }]); }} className="flex-1">
+                    <Button variant="outline" onClick={() => { setEditingVariantIndex(null); setNewVariantName(""); setNewVariantOptions([{ name: "", price: "", cost: "" }]); }} className="flex-1">
                       Cancelar edición
                     </Button>
                   )}
