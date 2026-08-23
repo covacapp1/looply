@@ -72,6 +72,7 @@ export interface Activity {
 export interface ProductVariantOption {
   name: string;
   price: number;
+  cost: number;
 }
 
 export interface ProductVariant {

@@ -74,7 +74,7 @@ export default function MenuPage() {
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [variantDialogOpen, setVariantDialogOpen] = useState(false);
   const [newVariantName, setNewVariantName] = useState("");
-  const [newVariantOptions, setNewVariantOptions] = useState<{ name: string; price: string }[]>([{ name: "", price: "" }]);
+  const [newVariantOptions, setNewVariantOptions] = useState<{ name: string; price: string; cost: string }[]>([{ name: "", price: "", cost: "" }]);
   const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
 
   // New category
@@ -145,7 +145,8 @@ export default function MenuPage() {
   }
 
   async function handleSave() {
-    if (!user || !name.trim() || !price) return;
+    if (!user || !name.trim()) return;
+    if (variants.length === 0 && !price) return;
     setSaving(true);
 
     if (editingItem) {
@@ -232,10 +233,10 @@ export default function MenuPage() {
     setEditingVariantIndex(editIndex);
     if (editIndex !== null && variantTemplates[editIndex]) {
       setNewVariantName(variantTemplates[editIndex].name);
-      setNewVariantOptions(variantTemplates[editIndex].options.map((o) => ({ name: o.name, price: o.price.toString() })));
+      setNewVariantOptions(variantTemplates[editIndex].options.map((o) => ({ name: o.name, price: o.price.toString(), cost: o.cost.toString() })));
     } else {
       setNewVariantName("");
-      setNewVariantOptions([{ name: "", price: "" }]);
+      setNewVariantOptions([{ name: "", price: "", cost: "" }]);
     }
     setVariantDialogOpen(true);
   }
@@ -250,7 +251,7 @@ export default function MenuPage() {
       toast.error("Agregá al menos 1 opción");
       return;
     }
-    const options = validOptions.map((o) => ({ name: o.name.trim(), price: parseFloat(o.price) || 0 }));
+    const options = validOptions.map((o) => ({ name: o.name.trim(), price: parseFloat(o.price) || 0, cost: parseFloat(o.cost) || 0 }));
     const newVariant: ProductVariant = { name: newVariantName.trim(), options };
     let updated: ProductVariant[];
     if (editingVariantIndex !== null) {
@@ -263,7 +264,7 @@ export default function MenuPage() {
     if (user) saveVariantTemplates(user.id, updated);
     setVariantDialogOpen(false);
     setNewVariantName("");
-    setNewVariantOptions([{ name: "", price: "" }]);
+    setNewVariantOptions([{ name: "", price: "", cost: "" }]);
     setEditingVariantIndex(null);
     toast.success(editingVariantIndex !== null ? "Variante actualizada" : "Variante creada");
   }
@@ -440,12 +441,31 @@ export default function MenuPage() {
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
-                <Label>Precio ($) *</Label>
-                <Input type="number" step="0.01" min="0" placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} />
+                <Label>Precio ($){variants.length === 0 && " *"}</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder={variants.length > 0 ? "Opcional (usar variante)" : "0.00"}
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  disabled={variants.length > 0}
+                />
+                {variants.length > 0 && (
+                  <p className="text-[10px] text-muted-foreground">Precio en variante</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Costo ($)</Label>
-                <Input type="number" step="0.01" min="0" placeholder="0.00" value={cost} onChange={(e) => setCost(e.target.value)} />
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder={variants.length > 0 ? "Opcional (usar variante)" : "0.00"}
+                  value={cost}
+                  onChange={(e) => setCost(e.target.value)}
+                  disabled={variants.length > 0}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Categoría</Label>
@@ -498,7 +518,7 @@ export default function MenuPage() {
               )}
             </div>
 
-            <Button className="w-full" onClick={handleSave} disabled={saving || !name.trim() || !price}>
+            <Button className="w-full" onClick={handleSave} disabled={saving || !name.trim() || (variants.length === 0 && !price)}>
               {saving ? "Guardando..." : editingItem ? "Guardar Cambios" : "Agregar Producto"}
             </Button>
           </div>
@@ -564,7 +584,7 @@ export default function MenuPage() {
                     <div>
                       <p className="text-sm font-medium">{v.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {v.options.map((o) => `${o.name} $${o.price}`).join(", ")}
+                        {v.options.map((o) => `${o.name} $${o.price} (costo $${o.cost})`).join(", ")}
                       </p>
                     </div>
                     <div className="flex gap-1">
@@ -607,11 +627,24 @@ export default function MenuPage() {
                         type="number"
                         step="0.01"
                         min="0"
-                        placeholder="$0"
+                        placeholder="Precio"
                         value={opt.price}
                         onChange={(e) => {
                           const updated = [...newVariantOptions];
                           updated[i].price = e.target.value;
+                          setNewVariantOptions(updated);
+                        }}
+                        className="w-20"
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Costo"
+                        value={opt.cost}
+                        onChange={(e) => {
+                          const updated = [...newVariantOptions];
+                          updated[i].cost = e.target.value;
                           setNewVariantOptions(updated);
                         }}
                         className="w-20"
@@ -633,7 +666,7 @@ export default function MenuPage() {
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => setNewVariantOptions([...newVariantOptions, { name: "", price: "" }])}
+                    onClick={() => setNewVariantOptions([...newVariantOptions, { name: "", price: "", cost: "" }])}
                   >
                     <PlusCircle className="h-3.5 w-3.5 mr-1" />
                     Agregar opción
