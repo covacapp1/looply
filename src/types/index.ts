@@ -80,6 +80,11 @@ export interface ProductVariant {
   options: ProductVariantOption[];
 }
 
+export interface VariantTemplate {
+  name: string;
+  options: string[];
+}
+
 export interface MenuItem {
   id: string;
   merchantId: string;

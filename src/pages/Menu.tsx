@@ -13,7 +13,7 @@ import { UtensilsCrossed, PlusCircle, Trash2, Eye, EyeOff, Camera, X, Tag, ListP
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { getMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from "@/services/supabase";
-import type { MenuItem, ProductVariant } from "@/types";
+import type { MenuItem, ProductVariant, VariantTemplate } from "@/types";
 import { toast } from "sonner";
 
 const DEFAULT_CATEGORIES = ["General", "Entradas", "Platos", "Bebidas", "Postres", "Otros"];
@@ -37,21 +37,17 @@ function saveCategories(userId: string, cats: string[]) {
   localStorage.setItem(getStorageKey(userId), JSON.stringify(cats));
 }
 
-function loadVariantTemplates(userId: string): ProductVariant[] {
+function loadVariantTemplates(userId: string): VariantTemplate[] {
   const stored = localStorage.getItem(getVariantStorageKey(userId));
   if (!stored) return [];
   const parsed = JSON.parse(stored);
   return parsed.map((v: any) => ({
     name: v.name,
-    options: v.options.map((o: any) =>
-      typeof o === "string"
-        ? { name: o, price: 0, cost: 0 }
-        : { name: o.name, price: o.price || 0, cost: o.cost || 0 }
-    ),
+    options: v.options.map((o: any) => (typeof o === "string" ? o : o.name || "")),
   }));
 }
 
-function saveVariantTemplates(userId: string, variants: ProductVariant[]) {
+function saveVariantTemplates(userId: string, variants: VariantTemplate[]) {
   localStorage.setItem(getVariantStorageKey(userId), JSON.stringify(variants));
 }
 
@@ -67,8 +63,8 @@ export default function MenuPage() {
   // Categories
   const [categories, setCategories] = useState<string[]>([]);
 
-  // Global variant templates
-  const [variantTemplates, setVariantTemplates] = useState<ProductVariant[]>([]);
+  // Global variant templates (only names)
+  const [variantTemplates, setVariantTemplates] = useState<VariantTemplate[]>([]);
 
   // Form
   const [name, setName] = useState("");
@@ -79,11 +75,13 @@ export default function MenuPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Variants
+  // Variants assigned to product (with prices)
   const [variants, setVariants] = useState<ProductVariant[]>([]);
+
+  // Variant templates dialog
   const [variantDialogOpen, setVariantDialogOpen] = useState(false);
   const [newVariantName, setNewVariantName] = useState("");
-  const [newVariantOptions, setNewVariantOptions] = useState<{ name: string; price: string; cost: string }[]>([{ name: "", price: "", cost: "" }]);
+  const [newVariantOptions, setNewVariantOptions] = useState<string[]>([""]);
   const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
 
   // New category
@@ -241,14 +239,15 @@ export default function MenuPage() {
     toast.success("Categoría eliminada");
   }
 
+  // Variant Templates CRUD (names only)
   function openVariantDialog(editIndex: number | null = null) {
     setEditingVariantIndex(editIndex);
     if (editIndex !== null && variantTemplates[editIndex]) {
       setNewVariantName(variantTemplates[editIndex].name);
-      setNewVariantOptions(variantTemplates[editIndex].options.map((o) => ({ name: o.name, price: o.price.toString(), cost: o.cost.toString() })));
+      setNewVariantOptions([...variantTemplates[editIndex].options]);
     } else {
       setNewVariantName("");
-      setNewVariantOptions([{ name: "", price: "", cost: "" }]);
+      setNewVariantOptions([""]);
     }
     setVariantDialogOpen(true);
   }
@@ -258,14 +257,13 @@ export default function MenuPage() {
       toast.error("Poné un nombre para la variante");
       return;
     }
-    const validOptions = newVariantOptions.filter((o) => o.name.trim());
+    const validOptions = newVariantOptions.filter((o) => o.trim());
     if (validOptions.length < 1) {
       toast.error("Agregá al menos 1 opción");
       return;
     }
-    const options = validOptions.map((o) => ({ name: o.name.trim(), price: parseFloat(o.price) || 0, cost: parseFloat(o.cost) || 0 }));
-    const newVariant: ProductVariant = { name: newVariantName.trim(), options };
-    let updated: ProductVariant[];
+    const newVariant: VariantTemplate = { name: newVariantName.trim(), options: validOptions.map((o) => o.trim()) };
+    let updated: VariantTemplate[];
     if (editingVariantIndex !== null) {
       updated = [...variantTemplates];
       updated[editingVariantIndex] = newVariant;
@@ -276,7 +274,7 @@ export default function MenuPage() {
     if (user) saveVariantTemplates(user.id, updated);
     setVariantDialogOpen(false);
     setNewVariantName("");
-    setNewVariantOptions([{ name: "", price: "", cost: "" }]);
+    setNewVariantOptions([""]);
     setEditingVariantIndex(null);
     toast.success(editingVariantIndex !== null ? "Variante actualizada" : "Variante creada");
   }
@@ -288,14 +286,32 @@ export default function MenuPage() {
     toast.success("Variante eliminada");
   }
 
-  function handleToggleVariant(variant: ProductVariant) {
+  function handleToggleVariant(template: VariantTemplate) {
     setVariants((prev) => {
-      const exists = prev.some((v) => v.name === variant.name);
+      const exists = prev.some((v) => v.name === template.name);
       if (exists) {
-        return prev.filter((v) => v.name !== variant.name);
+        return prev.filter((v) => v.name !== template.name);
       }
-      return [...prev, variant];
+      // Add variant with empty prices for each option
+      return [...prev, {
+        name: template.name,
+        options: template.options.map((opt) => ({ name: opt, price: 0, cost: 0 })),
+      }];
     });
+  }
+
+  function updateVariantOptionPrice(variantName: string, optionName: string, field: "price" | "cost", value: string) {
+    setVariants((prev) =>
+      prev.map((v) => {
+        if (v.name !== variantName) return v;
+        return {
+          ...v,
+          options: v.options.map((o) =>
+            o.name === optionName ? { ...o, [field]: parseFloat(value) || 0 } : o
+          ),
+        };
+      })
+    );
   }
 
   const itemsByCategory = categories.map((cat) => ({
@@ -376,7 +392,7 @@ export default function MenuPage() {
                         )}
                         <div className="flex items-center gap-2 mt-0.5">
                           <p className="text-sm font-bold text-primary">
-                            ${item.price.toLocaleString("es-AR")}
+                            ${item.price > 0 ? item.price.toLocaleString("es-AR") : getMinVariantPrice(item)}
                           </p>
                           {item.cost > 0 && (
                             <p className="text-xs text-muted-foreground">
@@ -384,6 +400,15 @@ export default function MenuPage() {
                             </p>
                           )}
                         </div>
+                        {item.variants && item.variants.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {item.variants.map((v) => (
+                              <Badge key={v.name} variant="secondary" className="text-[10px]">
+                                {v.name}: {v.options.map((o) => o.name).join(", ")}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleToggle(item)}>
@@ -407,7 +432,7 @@ export default function MenuPage() {
 
       {/* Product Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingItem ? "Editar Producto" : "Agregar Producto"}</DialogTitle>
           </DialogHeader>
@@ -458,14 +483,11 @@ export default function MenuPage() {
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder={variants.length > 0 ? "Opcional (usar variante)" : "0.00"}
+                  placeholder={variants.length > 0 ? "Opcional" : "0.00"}
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   disabled={variants.length > 0}
                 />
-                {variants.length > 0 && (
-                  <p className="text-[10px] text-muted-foreground">Precio en variante</p>
-                )}
               </div>
               <div className="space-y-2">
                 <Label>Costo ($)</Label>
@@ -473,7 +495,7 @@ export default function MenuPage() {
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder={variants.length > 0 ? "Opcional (usar variante)" : "0.00"}
+                  placeholder={variants.length > 0 ? "Opcional" : "0.00"}
                   value={cost}
                   onChange={(e) => setCost(e.target.value)}
                   disabled={variants.length > 0}
@@ -494,7 +516,7 @@ export default function MenuPage() {
               </div>
             </div>
 
-            {/* Variants assigned to product */}
+            {/* Variant selection */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Variantes</Label>
@@ -529,6 +551,49 @@ export default function MenuPage() {
                 <p className="text-xs text-muted-foreground">Creá variantes desde el botón "Variantes" arriba</p>
               )}
             </div>
+
+            {/* Variant price/cost inputs per product */}
+            {variants.length > 0 && (
+              <div className="space-y-3 border-t border-border pt-3">
+                <Label>Precios por variante</Label>
+                {variants.map((variant) => (
+                  <div key={variant.name}>
+                    <p className="text-xs font-medium text-muted-foreground mb-1.5">{variant.name}</p>
+                    <div className="space-y-1.5">
+                      {variant.options.map((option) => (
+                        <div key={option.name} className="flex items-center gap-2">
+                          <span className="text-xs text-foreground w-20 truncate">{option.name}</span>
+                          <div className="flex items-center gap-1 flex-1">
+                            <span className="text-[10px] text-muted-foreground">$</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="Venta"
+                              value={option.price || ""}
+                              onChange={(e) => updateVariantOptionPrice(variant.name, option.name, "price", e.target.value)}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                          <div className="flex items-center gap-1 flex-1">
+                            <span className="text-[10px] text-muted-foreground">c$</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="Costo"
+                              value={option.cost || ""}
+                              onChange={(e) => updateVariantOptionPrice(variant.name, option.name, "cost", e.target.value)}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <Button className="w-full" onClick={handleSave} disabled={saving || !name.trim() || (variants.length === 0 && !price)}>
               {saving ? "Guardando..." : editingItem ? "Guardar Cambios" : "Agregar Producto"}
@@ -588,16 +653,17 @@ export default function MenuPage() {
           <DialogHeader>
             <DialogTitle>Gestionar Variantes</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 mt-4">
+          <p className="text-xs text-muted-foreground">
+            Creá las opciones (ej: Tamaño → Chico, Mediano, Grande). Los precios se asignan por producto.
+          </p>
+          <div className="space-y-4 mt-2">
             {variantTemplates.length > 0 ? (
               <div className="space-y-2">
                 {variantTemplates.map((v, i) => (
                   <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
                     <div>
                       <p className="text-sm font-medium">{v.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {v.options.map((o) => `${o.name} $${o.price} (costo $${o.cost})`).join(", ")}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{v.options.join(", ")}</p>
                     </div>
                     <div className="flex gap-1">
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openVariantDialog(i)}>
@@ -619,47 +685,21 @@ export default function MenuPage() {
               <div className="space-y-3">
                 <div className="space-y-2">
                   <Label>Nombre de la variante *</Label>
-                  <Input placeholder="Ej: Bebida, Tamaño, Sabor" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} />
+                  <Input placeholder="Ej: Tamaño, Sabor, Bebida" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Opciones</Label>
+                  <Label>Opciones (solo nombres)</Label>
                   {newVariantOptions.map((opt, i) => (
                     <div key={i} className="flex gap-2 items-center">
                       <Input
-                        placeholder="Nombre"
-                        value={opt.name}
+                        placeholder="Ej: Chico, Mediano, Grande"
+                        value={opt}
                         onChange={(e) => {
                           const updated = [...newVariantOptions];
-                          updated[i].name = e.target.value;
+                          updated[i] = e.target.value;
                           setNewVariantOptions(updated);
                         }}
                         className="flex-1"
-                      />
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="Precio"
-                        value={opt.price}
-                        onChange={(e) => {
-                          const updated = [...newVariantOptions];
-                          updated[i].price = e.target.value;
-                          setNewVariantOptions(updated);
-                        }}
-                        className="w-20"
-                      />
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="Costo"
-                        value={opt.cost}
-                        onChange={(e) => {
-                          const updated = [...newVariantOptions];
-                          updated[i].cost = e.target.value;
-                          setNewVariantOptions(updated);
-                        }}
-                        className="w-20"
                       />
                       {newVariantOptions.length > 1 && (
                         <Button
@@ -678,7 +718,7 @@ export default function MenuPage() {
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => setNewVariantOptions([...newVariantOptions, { name: "", price: "", cost: "" }])}
+                    onClick={() => setNewVariantOptions([...newVariantOptions, ""])}
                   >
                     <PlusCircle className="h-3.5 w-3.5 mr-1" />
                     Agregar opción
@@ -686,7 +726,7 @@ export default function MenuPage() {
                 </div>
                 <div className="flex gap-2">
                   {editingVariantIndex !== null && (
-                    <Button variant="outline" onClick={() => { setEditingVariantIndex(null); setNewVariantName(""); setNewVariantOptions([{ name: "", price: "", cost: "" }]); }} className="flex-1">
+                    <Button variant="outline" onClick={() => { setEditingVariantIndex(null); setNewVariantName(""); setNewVariantOptions([""]); }} className="flex-1">
                       Cancelar edición
                     </Button>
                   )}
@@ -701,4 +741,11 @@ export default function MenuPage() {
       </Dialog>
     </div>
   );
+}
+
+function getMinVariantPrice(item: MenuItem): string {
+  if (!item.variants || item.variants.length === 0) return "$0";
+  const allPrices = item.variants.flatMap((v) => v.options.map((o) => o.price)).filter((p) => p > 0);
+  if (allPrices.length === 0) return "$0";
+  return `$${Math.min(...allPrices).toLocaleString("es-AR")}`;
 }
