@@ -193,6 +193,12 @@ export default function ShopPage() {
     return cart.reduce((sum, c) => sum + c.quantity, 0);
   }
 
+  function getItemCartCount(itemId: string) {
+    return cart
+      .filter((c) => c.item.id === itemId)
+      .reduce((sum, c) => sum + c.quantity, 0);
+  }
+
   async function handlePlaceOrder() {
     if (!merchantId || !customer || cart.length === 0) return;
     setLoading(true);
@@ -410,10 +416,21 @@ export default function ShopPage() {
                               {!hasVariants && (
                                 <button
                                   type="button"
-                                  className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0"
+                                  className={`h-8 min-w-[2rem] rounded-full flex items-center justify-center flex-shrink-0 gap-1 px-2 ${
+                                    getItemCartCount(item.id) > 0
+                                      ? "bg-primary text-primary-foreground"
+                                      : "bg-primary text-primary-foreground"
+                                  }`}
                                   onClick={() => addToCart(item)}
                                 >
-                                  <Plus className="h-4 w-4" />
+                                  {getItemCartCount(item.id) > 0 ? (
+                                    <>
+                                      <span className="text-xs font-bold">{getItemCartCount(item.id)}</span>
+                                      <Plus className="h-3.5 w-3.5" />
+                                    </>
+                                  ) : (
+                                    <Plus className="h-4 w-4" />
+                                  )}
                                 </button>
                               )}
                             </div>
