@@ -292,7 +292,7 @@ export default function OrdersPage() {
                                 </p>
                                 {item.variants && Object.keys(item.variants).length > 0 && (
                                   <div className="text-xs text-muted-foreground ml-4 space-y-0.5">
-                                    {Object.entries(item.variants).map(([variantName, options]) =>
+                                    {Object.entries(item.variants).flatMap(([variantName, options]) =>
                                       Object.entries(options).map(([optionName, qty]) => {
                                         if (qty <= 0) return null;
                                         const price = item.variantPrices?.[variantName]?.[optionName] || 0;
@@ -305,11 +305,12 @@ export default function OrdersPage() {
                                     )}
                                   </div>
                                 )}
-                              {item.notes && (
-                                <p className="text-xs text-muted-foreground ml-4 italic">📝 {item.notes}</p>
-                              )}
-                            </div>
-                          ))}
+                                {item.notes && (
+                                  <p className="text-xs text-muted-foreground ml-4 italic">📝 {item.notes}</p>
+                                )}
+                              </div>
+                            );
+                          })}
                           {order.notes && (
                             <p className="text-xs text-muted-foreground ml-4 italic border-t border-border pt-1 mt-1">📝 {order.notes}</p>
                           )}
