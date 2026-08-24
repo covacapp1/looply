@@ -551,13 +551,13 @@ export async function createShopCustomer(customer: {
 
   const { data, error } = await supabase
     .from("shop_customers")
-    .insert({
+    .upsert({
       merchant_id: customer.merchantId,
       phone: customer.phone,
       name: customer.name,
       address: customer.address || "",
       notes: customer.notes || "",
-    })
+    }, { onConflict: "merchant_id,phone" })
     .select()
     .single();
 
