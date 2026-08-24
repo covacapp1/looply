@@ -18,6 +18,7 @@ interface CartItem {
   quantity: number;
   selectedVariants: Record<string, string>;
   variantPrices: Record<string, number>;
+  variantQuantities: Record<string, number>;
 }
 
 export default function ShopPage() {
@@ -37,6 +38,7 @@ export default function ShopPage() {
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [variantPrices, setVariantPrices] = useState<Record<string, number>>({});
+  const [variantQuantities, setVariantQuantities] = useState<Record<string, number>>({});
 
   // Registration form
   const [regName, setRegName] = useState("");
@@ -109,22 +111,24 @@ export default function ShopPage() {
   function addToCart(item: MenuItem) {
     const variants = item.variants?.length > 0 ? selectedVariants : {};
     const prices = item.variants?.length > 0 ? variantPrices : {};
+    const quantities = item.variants?.length > 0 ? variantQuantities : {};
     setCart((prev) => {
-      const key = `${item.id}-${JSON.stringify(variants)}`;
+      const key = `${item.id}-${JSON.stringify(variants)}-${JSON.stringify(quantities)}`;
       const existing = prev.find((c) => {
-        const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}`;
+        const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}-${JSON.stringify(c.variantQuantities)}`;
         return cKey === key;
       });
       if (existing) {
         return prev.map((c) => {
-          const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}`;
+          const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}-${JSON.stringify(c.variantQuantities)}`;
           return cKey === key ? { ...c, quantity: c.quantity + 1 } : c;
         });
       }
-      return [...prev, { item, quantity: 1, selectedVariants: variants, variantPrices: prices }];
+      return [...prev, { item, quantity: 1, selectedVariants: variants, variantPrices: prices, variantQuantities: quantities }];
     });
     setSelectedVariants({});
     setVariantPrices({});
+    setVariantQuantities({});
     setExpandedItem(null);
   }
 
@@ -142,7 +146,10 @@ export default function ShopPage() {
 
   function getCartTotal() {
     return cart.reduce((sum, c) => {
-      const variantTotal = Object.values(c.variantPrices).reduce((vSum, p) => vSum + p, 0);
+      const variantTotal = Object.entries(c.variantPrices).reduce((vSum, [key, price]) => {
+        const qty = c.variantQuantities[key] || 1;
+        return vSum + price * qty;
+      }, 0);
       return sum + (c.item.price + variantTotal) * c.quantity;
     }, 0);
   }
@@ -165,6 +172,7 @@ export default function ShopPage() {
         quantity: c.quantity,
         variants: c.selectedVariants,
         variantPrices: c.variantPrices,
+        variantQuantities: c.variantQuantities,
       })),
       total: getCartTotal(),
     });
@@ -466,28 +474,54 @@ export default function ShopPage() {
                                     {variant.options.map((option) => {
                                       const isSelected = selectedVariants[variant.name] === option.name;
                                       const priceLabel = option.price > 0 ? ` +$${option.price.toLocaleString("es-AR")}` : "";
+                                      const qty = variantQuantities[variant.name] || 1;
                                       return (
-                                        <button
-                                          key={option.name}
-                                          type="button"
-                                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                                            isSelected
-                                              ? "bg-primary text-primary-foreground"
-                                              : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                          }`}
-                                          onClick={() => {
-                                            setSelectedVariants((prev) => ({
-                                              ...prev,
-                                              [variant.name]: option.name,
-                                            }));
-                                            setVariantPrices((prev) => ({
-                                              ...prev,
-                                              [variant.name]: option.price,
-                                            }));
-                                          }}
-                                        >
-                                          {option.name}{priceLabel}
-                                        </button>
+                                        <div key={option.name} className="flex items-center gap-1">
+                                          <button
+                                            type="button"
+                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                                              isSelected
+                                                ? "bg-primary text-primary-foreground"
+                                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                            }`}
+                                            onClick={() => {
+                                              setSelectedVariants((prev) => ({
+                                                ...prev,
+                                                [variant.name]: option.name,
+                                              }));
+                                              setVariantPrices((prev) => ({
+                                                ...prev,
+                                                [variant.name]: option.price,
+                                              }));
+                                            }}
+                                          >
+                                            {option.name}{priceLabel}
+                                          </button>
+                                          {isSelected && (
+                                            <div className="flex items-center gap-0.5 bg-muted rounded-full">
+                                              <button
+                                                type="button"
+                                                className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-muted/80"
+                                                onClick={() => {
+                                                  const newQty = Math.max(1, qty - 1);
+                                                  setVariantQuantities((prev) => ({ ...prev, [variant.name]: newQty }));
+                                                }}
+                                              >
+                                                <Minus className="h-3 w-3" />
+                                              </button>
+                                              <span className="w-5 text-center text-xs font-bold">{qty}</span>
+                                              <button
+                                                type="button"
+                                                className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-muted/80"
+                                                onClick={() => {
+                                                  setVariantQuantities((prev) => ({ ...prev, [variant.name]: qty + 1 }));
+                                                }}
+                                              >
+                                                <Plus className="h-3 w-3" />
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
                                       );
                                     })}
                                   </div>
@@ -571,11 +605,15 @@ export default function ShopPage() {
                           <p className="font-medium text-sm">{c.item.name}</p>
                           {Object.keys(c.selectedVariants).length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {Object.entries(c.selectedVariants).map(([key, value]) => (
-                                <Badge key={key} variant="secondary" className="text-[10px]">
-                                  {key}: {value}{c.variantPrices[key] ? ` +$${c.variantPrices[key]}` : ""}
-                                </Badge>
-                              ))}
+                              {Object.entries(c.selectedVariants).map(([key, value]) => {
+                                const qty = c.variantQuantities[key] || 1;
+                                const price = c.variantPrices[key] || 0;
+                                return (
+                                  <Badge key={key} variant="secondary" className="text-[10px]">
+                                    {key}: {value}{qty > 1 ? ` x${qty}` : ""}{price > 0 ? ` +$${price * qty}` : ""}
+                                  </Badge>
+                                );
+                              })}
                             </div>
                           )}
                           <p className="text-xs text-muted-foreground mt-1">

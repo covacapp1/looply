@@ -111,6 +111,7 @@ export interface OrderItem {
   quantity: number;
   variants?: Record<string, string>;
   variantPrices?: Record<string, number>;
+  variantQuantities?: Record<string, number>;
 }
 
 export interface Order {

@@ -20,7 +20,7 @@ const STATUS_CONFIG = {
   cancelled: { label: "Cancelado", icon: XCircle, color: "bg-red-100 text-red-700" },
 };
 
-const DEFAULT_MESSAGE = "Hola {cliente}, gracias por tu compra. Tu pedido #{pedido} fue recibido y estará listo en aproximadamente {tiempo} minutos.";
+  const DEFAULT_MESSAGE = "Hola {cliente}, gracias por tu compra. Tu pedido #{pedido} fue recibido y estará listo en aproximadamente {tiempo} minutos.\n\n{detalle}\n\nTotal: {total}";
 
 export default function OrdersPage() {
   const { user } = useAuth();
@@ -70,11 +70,22 @@ export default function OrdersPage() {
       return;
     }
 
+    const detail = order.items.map((item) => {
+      const variants = item.variantPrices && Object.keys(item.variantPrices).length > 0
+        ? ` (${Object.entries(item.variantPrices).map(([key, price]) => {
+            const qty = item.variantQuantities?.[key] || 1;
+            return `${key}: ${qty > 1 ? `x${qty} ` : ""}$${price * qty}`;
+          }).join(", ")})`
+        : "";
+      return `${item.name}${variants} x${item.quantity}`;
+    }).join("\n");
+
     const message = messageTemplate
       .replace("{cliente}", order.customerName || "Cliente")
       .replace("{pedido}", order.id.slice(0, 8))
       .replace("{tiempo}", estimatedTime)
-      .replace("{total}", `$${order.total.toLocaleString("es-AR")}`);
+      .replace("{total}", `$${order.total.toLocaleString("es-AR")}`)
+      .replace("{detalle}", detail);
 
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
@@ -260,7 +271,10 @@ export default function OrdersPage() {
                               )}
                               {item.variantPrices && Object.keys(item.variantPrices).length > 0 && (
                                 <p className="text-xs text-muted-foreground ml-4">
-                                  {Object.entries(item.variantPrices).map(([key, price]) => `${key}: +$${price}`).join(" | ")}
+                                  {Object.entries(item.variantPrices).map(([key, price]) => {
+                                    const qty = item.variantQuantities?.[key] || 1;
+                                    return `${key}: +$${price * qty}${qty > 1 ? ` x${qty}` : ""}`;
+                                  }).join(" | ")}
                                 </p>
                               )}
                             </div>
@@ -409,6 +423,7 @@ export default function OrdersPage() {
                 <p>{"{pedido}"} — Número del pedido</p>
                 <p>{"{tiempo}"} — Tiempo estimado (minutos)</p>
                 <p>{"{total}"} — Total del pedido</p>
+                <p>{"{detalle}"} — Detalle de items con variantes</p>
               </div>
             </div>
             <Button onClick={handleSaveMessage} className="w-full">
