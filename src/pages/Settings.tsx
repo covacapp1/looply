@@ -47,14 +47,16 @@ export default function SettingsPage() {
   }, [user]);
 
   useEffect(() => {
-    if (activeTab === "subscription" && paypalRef.current && !paypalRendered.current) {
+    if (activeTab === "subscription") {
+      paypalRendered.current = false;
       renderPayPalButton();
     }
   }, [activeTab]);
 
-  function renderPayPalButton() {
-    if (!window.paypal || !paypalRef.current) {
-      setTimeout(renderPayPalButton, 500);
+  function renderPayPalButton(retries = 0) {
+    if (!paypalRef.current) return;
+    if (!window.paypal) {
+      if (retries < 20) setTimeout(() => renderPayPalButton(retries + 1), 300);
       return;
     }
     paypalRef.current.innerHTML = "";
