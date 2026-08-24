@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,12 @@ import { isPushSupported, getPermissionState, subscribePush, unsubscribePush, is
 import { getBusinessSettings, saveBusinessSettings, type BusinessSettings } from "@/services/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+
+declare global {
+  interface Window {
+    paypal?: any;
+  }
+}
 
 const defaultSettings: BusinessSettings = {
   name: "", slug: "", description: "", phone: "", email: "",
@@ -27,6 +33,8 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<BusinessSettings>(defaultSettings);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [saving, setSaving] = useState(false);
+  const paypalRef = useRef<HTMLDivElement>(null);
+  const paypalRendered = useRef(false);
 
   const [pushSupported, setPushSupported] = useState(true);
   const [permissionState, setPermissionState] = useState<NotificationPermission | "unsupported">("default");
@@ -37,6 +45,24 @@ export default function SettingsPage() {
     loadSettings();
     checkPushState();
   }, [user]);
+
+  useEffect(() => {
+    if (activeTab === "subscription" && paypalRef.current && !paypalRendered.current) {
+      renderPayPalButton();
+    }
+  }, [activeTab]);
+
+  function renderPayPalButton() {
+    if (!window.paypal || !paypalRef.current) {
+      setTimeout(renderPayPalButton, 500);
+      return;
+    }
+    paypalRef.current.innerHTML = "";
+    paypalRendered.current = true;
+    window.paypal.HostedButtons({
+      hostedButtonId: "F5QJ3NFVJCY7Q",
+    }).render(paypalRef.current);
+  }
 
   async function loadSettings() {
     if (!user) return;
@@ -298,26 +324,9 @@ export default function SettingsPage() {
                     <p className="text-xs text-muted-foreground">$10 USD / mes</p>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Link de cobro</Label>
-                  <Input
-                    placeholder="https://www.paypal.com/..."
-                    value={settings.paypalLink}
-                    onChange={(e) => updateSettings("paypalLink", e.target.value)}
-                  />
-                  <p className="text-[10px] text-muted-foreground">Pegá el link de suscripción de PayPal</p>
+                <div className="flex justify-center py-3">
+                  <div ref={paypalRef} />
                 </div>
-                {settings.paypalLink && (
-                  <Button
-                    variant="outline"
-                    className="w-full mt-3"
-                    size="sm"
-                    onClick={() => window.open(settings.paypalLink, "_blank")}
-                  >
-                    <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                    Pagar con PayPal
-                  </Button>
-                )}
               </div>
             </CardContent>
           </Card>
