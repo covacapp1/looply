@@ -549,31 +549,57 @@ export async function createShopCustomer(customer: {
 }): Promise<ShopCustomer | null> {
   if (!isSupabaseConfigured() || !supabase) return null;
 
-  const { data, error } = await supabase
+  // Try insert first
+  const { data: insertData, error: insertError } = await supabase
     .from("shop_customers")
-    .upsert({
+    .insert({
       merchant_id: customer.merchantId,
       phone: customer.phone,
       name: customer.name,
       address: customer.address || "",
       notes: customer.notes || "",
-    }, { onConflict: "merchant_id,phone" })
+    })
     .select()
     .single();
 
-  if (error) {
-    console.error("Error creating shop customer:", error);
+  if (!insertError && insertData) {
+    return {
+      id: insertData.id,
+      merchantId: insertData.merchant_id,
+      phone: insertData.phone,
+      name: insertData.name,
+      address: insertData.address || "",
+      notes: insertData.notes || "",
+      createdAt: new Date(insertData.created_at),
+    };
+  }
+
+  // If insert failed (likely duplicate phone), try update
+  const { data: updateData, error: updateError } = await supabase
+    .from("shop_customers")
+    .update({
+      name: customer.name,
+      address: customer.address || "",
+      notes: customer.notes || "",
+    })
+    .eq("merchant_id", customer.merchantId)
+    .eq("phone", customer.phone)
+    .select()
+    .single();
+
+  if (updateError) {
+    console.error("Error creating/updating shop customer:", insertError || updateError);
     return null;
   }
 
   return {
-    id: data.id,
-    merchantId: data.merchant_id,
-    phone: data.phone,
-    name: data.name,
-    address: data.address || "",
-    notes: data.notes || "",
-    createdAt: new Date(data.created_at),
+    id: updateData.id,
+    merchantId: updateData.merchant_id,
+    phone: updateData.phone,
+    name: updateData.name,
+    address: updateData.address || "",
+    notes: updateData.notes || "",
+    createdAt: new Date(updateData.created_at),
   };
 }
 
