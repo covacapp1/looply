@@ -601,6 +601,7 @@ export async function getOrdersByMerchant(merchantId: string): Promise<Order[]> 
     customerAddress: o.shop_customers?.address || "",
     items: o.items || [],
     total: o.total,
+    notes: o.notes || "",
     status: o.status,
     createdAt: new Date(o.created_at),
     updatedAt: new Date(o.updated_at),
