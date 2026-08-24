@@ -404,9 +404,13 @@ export default function ShopPage() {
                                 </Button>
                               )}
                               {!hasVariants && (
-                                <Button size="sm" className="h-8 w-8 p-0" onClick={() => addToCart(item)}>
-                                  <Plus className="h-3 w-3" />
-                                </Button>
+                                <button
+                                  type="button"
+                                  className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0"
+                                  onClick={() => addToCart(item)}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </button>
                               )}
                             </div>
                           </div>
