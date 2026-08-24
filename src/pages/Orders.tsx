@@ -284,13 +284,13 @@ export default function OrdersPage() {
                                 }
                               }
                             }
-                            const itemTotal = (item.price + variantTotal) * item.quantity;
+                            const hasVariantPrices = Object.keys(item.variants || {}).length > 0;
                             return (
                               <div key={i}>
                                 <p>
-                                  {item.quantity}x {item.name}{itemTotal > 0 ? ` — $${itemTotal.toLocaleString("es-AR")}` : ""}
+                                  {item.quantity}x {item.name}
                                 </p>
-                                {item.variants && Object.keys(item.variants).length > 0 && (
+                                {hasVariantPrices ? (
                                   <div className="text-xs text-muted-foreground ml-4 space-y-0.5">
                                     {Object.entries(item.variants).flatMap(([variantName, options]) =>
                                       Object.entries(options).map(([optionName, qty]) => {
@@ -298,12 +298,17 @@ export default function OrdersPage() {
                                         const price = item.variantPrices?.[variantName]?.[optionName] || 0;
                                         return (
                                           <p key={`${variantName}-${optionName}`}>
-                                            {variantName}: {optionName}{qty > 1 ? ` x${qty}` : ""}{price > 0 ? ` +$${price * qty}` : ""}
+                                            {variantName}: {optionName}{qty > 1 ? ` x${qty}` : ""}{price > 0 ? ` — $${price * qty}` : ""}
                                           </p>
                                         );
                                       })
                                     )}
+                                    <p className="font-medium">Total: ${itemTotal.toLocaleString("es-AR")}</p>
                                   </div>
+                                ) : (
+                                  <p className="text-xs text-muted-foreground ml-4">
+                                    ${itemTotal.toLocaleString("es-AR")}
+                                  </p>
                                 )}
                                 {item.notes && (
                                   <p className="text-xs text-muted-foreground ml-4 italic">📝 {item.notes}</p>
