@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Phone, User, MapPin, StickyNote, Send, Store, ChevronDown, ChevronUp, Clock } from "lucide-react";
 import { findShopCustomer, createShopCustomer, getMenuItems, createOrder, createSale, getBusinessSettings } from "@/services/supabase";
@@ -16,9 +16,8 @@ type ViewState = "phone" | "register" | "menu" | "cart" | "order-sent";
 interface CartItem {
   item: MenuItem;
   quantity: number;
-  selectedVariants: Record<string, string>;
-  variantPrices: Record<string, number>;
-  variantQuantities: Record<string, number>;
+  selectedVariants: Record<string, Record<string, number>>;
+  variantPrices: Record<string, Record<string, number>>;
 }
 
 export default function ShopPage() {
@@ -34,18 +33,18 @@ export default function ShopPage() {
   const [openTime, setOpenTime] = useState("09:00");
   const [closeTime, setCloseTime] = useState("22:00");
 
-  // Variant selection state
+  // Variant selection state (multi-select per variant group)
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
-  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
-  const [variantPrices, setVariantPrices] = useState<Record<string, number>>({});
-  const [variantQuantities, setVariantQuantities] = useState<Record<string, number>>({});
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, Record<string, number>>>({});
 
   // Registration form
   const [regName, setRegName] = useState("");
   const [regAddress, setRegAddress] = useState("");
   const [regNotes, setRegNotes] = useState("");
 
-  // Load menu and check hours on mount
+  // Cart notes
+  const [cartNotes, setCartNotes] = useState("");
+
   useEffect(() => {
     if (merchantId) {
       getMenuItems(merchantId).then(setMenuItems);
@@ -59,23 +58,16 @@ export default function ShopPage() {
 
   function checkIfOpen(open: string, close: string) {
     const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const current = hours * 60 + minutes;
-
+    const current = now.getHours() * 60 + now.getMinutes();
     const [openH, openM] = open.split(":").map(Number);
     const [closeH, closeM] = close.split(":").map(Number);
-    const openMinutes = openH * 60 + openM;
-    const closeMinutes = closeH * 60 + closeM;
-
-    setIsOpen(current >= openMinutes && current < closeMinutes);
+    setIsOpen(current >= openH * 60 + openM && current < closeH * 60 + closeM);
   }
 
   async function handlePhoneSubmit() {
     if (!phone.trim() || !merchantId) return;
     setLoading(true);
     setError("");
-
     const existing = await findShopCustomer(merchantId, phone.trim());
     if (existing) {
       setCustomer(existing);
@@ -90,7 +82,6 @@ export default function ShopPage() {
     if (!regName.trim() || !merchantId) return;
     setLoading(true);
     setError("");
-
     const newCustomer = await createShopCustomer({
       merchantId,
       phone: phone.trim(),
@@ -98,7 +89,6 @@ export default function ShopPage() {
       address: regAddress.trim(),
       notes: regNotes.trim(),
     });
-
     if (newCustomer) {
       setCustomer(newCustomer);
       setView("menu");
@@ -108,27 +98,70 @@ export default function ShopPage() {
     setLoading(false);
   }
 
+  function toggleVariantOption(variantName: string, optionName: string, optionPrice: number) {
+    setSelectedVariants((prev) => {
+      const group = prev[variantName] || {};
+      const currentQty = group[optionName] || 0;
+      const newGroup = { ...group };
+      if (currentQty > 0) {
+        delete newGroup[optionName];
+      } else {
+        newGroup[optionName] = 1;
+      }
+      return { ...prev, [variantName]: newGroup };
+    });
+  }
+
+  function setVariantOptionQty(variantName: string, optionName: string, qty: number) {
+    setSelectedVariants((prev) => {
+      const group = prev[variantName] || {};
+      const newGroup = { ...group };
+      if (qty <= 0) {
+        delete newGroup[optionName];
+      } else {
+        newGroup[optionName] = qty;
+      }
+      if (Object.keys(newGroup).length === 0) {
+        const next = { ...prev };
+        delete next[variantName];
+        return next;
+      }
+      return { ...prev, [variantName]: newGroup };
+    });
+  }
+
+  function getItemVariantPrices(item: MenuItem): Record<string, Record<string, number>> {
+    const prices: Record<string, Record<string, number>> = {};
+    if (!item.variants) return prices;
+    for (const v of item.variants) {
+      prices[v.name] = {};
+      for (const o of v.options) {
+        prices[v.name][o.name] = o.price;
+      }
+    }
+    return prices;
+  }
+
   function addToCart(item: MenuItem) {
-    const variants = item.variants?.length > 0 ? selectedVariants : {};
-    const prices = item.variants?.length > 0 ? variantPrices : {};
-    const quantities = item.variants?.length > 0 ? variantQuantities : {};
+    const hasVariants = item.variants && item.variants.length > 0;
+    const variants = hasVariants ? selectedVariants : {};
+    const prices = hasVariants ? getItemVariantPrices(item) : {};
+
     setCart((prev) => {
-      const key = `${item.id}-${JSON.stringify(variants)}-${JSON.stringify(quantities)}`;
+      const key = `${item.id}-${JSON.stringify(variants)}`;
       const existing = prev.find((c) => {
-        const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}-${JSON.stringify(c.variantQuantities)}`;
+        const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}`;
         return cKey === key;
       });
       if (existing) {
         return prev.map((c) => {
-          const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}-${JSON.stringify(c.variantQuantities)}`;
+          const cKey = `${c.item.id}-${JSON.stringify(c.selectedVariants)}`;
           return cKey === key ? { ...c, quantity: c.quantity + 1 } : c;
         });
       }
-      return [...prev, { item, quantity: 1, selectedVariants: variants, variantPrices: prices, variantQuantities: quantities }];
+      return [...prev, { item, quantity: 1, selectedVariants: variants, variantPrices: prices }];
     });
     setSelectedVariants({});
-    setVariantPrices({});
-    setVariantQuantities({});
     setExpandedItem(null);
   }
 
@@ -136,9 +169,7 @@ export default function ShopPage() {
     setCart((prev) => {
       const existing = prev[index];
       if (existing && existing.quantity > 1) {
-        return prev.map((c, i) =>
-          i === index ? { ...c, quantity: c.quantity - 1 } : c
-        );
+        return prev.map((c, i) => i === index ? { ...c, quantity: c.quantity - 1 } : c);
       }
       return prev.filter((_, i) => i !== index);
     });
@@ -146,10 +177,14 @@ export default function ShopPage() {
 
   function getCartTotal() {
     return cart.reduce((sum, c) => {
-      const variantTotal = Object.entries(c.variantPrices).reduce((vSum, [key, price]) => {
-        const qty = c.variantQuantities[key] || 1;
-        return vSum + price * qty;
-      }, 0);
+      let variantTotal = 0;
+      for (const [variantName, options] of Object.entries(c.variantPrices)) {
+        const selected = c.selectedVariants[variantName] || {};
+        for (const [optionName, price] of Object.entries(options)) {
+          const qty = selected[optionName] || 0;
+          variantTotal += price * qty;
+        }
+      }
       return sum + (c.item.price + variantTotal) * c.quantity;
     }, 0);
   }
@@ -172,13 +207,12 @@ export default function ShopPage() {
         quantity: c.quantity,
         variants: c.selectedVariants,
         variantPrices: c.variantPrices,
-        variantQuantities: c.variantQuantities,
       })),
       total: getCartTotal(),
+      notes: cartNotes.trim() || undefined,
     });
 
     if (order) {
-      // Record sale
       await createSale({
         merchantId,
         orderId: order.id,
@@ -187,6 +221,7 @@ export default function ShopPage() {
         type: "order",
       });
       setCart([]);
+      setCartNotes("");
       setView("order-sent");
     }
     setLoading(false);
@@ -196,27 +231,17 @@ export default function ShopPage() {
   if (!isOpen) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-red-50 to-white flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-sm text-center"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm text-center">
           <div className="h-16 w-16 rounded-2xl bg-red-100 flex items-center justify-center mb-4 mx-auto">
             <Store className="h-8 w-8 text-red-500" />
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">Local Cerrado</h1>
-          <p className="text-muted-foreground mb-4">
-            Nuestro horario de atención es:
-          </p>
+          <p className="text-muted-foreground mb-4">Nuestro horario de atención es:</p>
           <div className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-border shadow-sm">
             <Clock className="h-5 w-5 text-primary" />
-            <span className="text-lg font-bold text-foreground">
-              {openTime} — {closeTime}
-            </span>
+            <span className="text-lg font-bold text-foreground">{openTime} — {closeTime}</span>
           </div>
-          <p className="text-sm text-muted-foreground mt-6">
-            Volvé dentro de nuestro horario de atención
-          </p>
+          <p className="text-sm text-muted-foreground mt-6">Volvé dentro de nuestro horario de atención</p>
         </motion.div>
       </div>
     );
@@ -226,42 +251,22 @@ export default function ShopPage() {
   if (view === "phone") {
     return (
       <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-sm"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
           <div className="flex flex-col items-center mb-8">
             <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
               <Store className="h-8 w-8 text-primary" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">Bienvenido</h1>
-            <p className="text-muted-foreground text-center mt-1">
-              Ingresá tu número de WhatsApp para continuar
-            </p>
+            <p className="text-muted-foreground text-center mt-1">Ingresá tu número de WhatsApp para continuar</p>
           </div>
-
           <Card className="border-border">
             <CardContent className="p-6 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="phone">WhatsApp</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="Ej: 11 1234 5678"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handlePhoneSubmit()}
-                  />
-                </div>
+                <Input id="phone" type="tel" placeholder="Ej: 11 1234 5678" value={phone} onChange={(e) => setPhone(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handlePhoneSubmit()} />
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
-              <Button
-                className="w-full"
-                onClick={handlePhoneSubmit}
-                disabled={loading || !phone.trim()}
-              >
+              <Button className="w-full" onClick={handlePhoneSubmit} disabled={loading || !phone.trim()}>
                 {loading ? "Buscando..." : "Continuar"}
               </Button>
             </CardContent>
@@ -275,61 +280,34 @@ export default function ShopPage() {
   if (view === "register") {
     return (
       <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-sm"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
           <div className="flex flex-col items-center mb-8">
             <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
               <User className="h-8 w-8 text-primary" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">Registrarse</h1>
-            <p className="text-muted-foreground text-center mt-1">
-              Completá tus datos por única vez
-            </p>
+            <p className="text-muted-foreground text-center mt-1">Completá tus datos por única vez</p>
           </div>
-
           <Card className="border-border">
             <CardContent className="p-6 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="reg-name">Nombre completo *</Label>
-                <Input
-                  id="reg-name"
-                  placeholder="Tu nombre"
-                  value={regName}
-                  onChange={(e) => setRegName(e.target.value)}
-                />
+                <Input id="reg-name" placeholder="Tu nombre" value={regName} onChange={(e) => setRegName(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reg-phone">WhatsApp</Label>
-                <Input id="reg-phone" value={phone} disabled className="bg-muted" />
+                <Label>WhatsApp</Label>
+                <Input value={phone} disabled className="bg-muted" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reg-address">Dirección</Label>
-                <Input
-                  id="reg-address"
-                  placeholder="Calle, número, piso"
-                  value={regAddress}
-                  onChange={(e) => setRegAddress(e.target.value)}
-                />
+                <Input id="reg-address" placeholder="Calle, número, piso" value={regAddress} onChange={(e) => setRegAddress(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reg-notes">Aclaraciones</Label>
-                <Textarea
-                  id="reg-notes"
-                  placeholder="Torre, departamento, código, etc."
-                  value={regNotes}
-                  onChange={(e) => setRegNotes(e.target.value)}
-                  rows={2}
-                />
+                <Textarea id="reg-notes" placeholder="Torre, departamento, código, etc." value={regNotes} onChange={(e) => setRegNotes(e.target.value)} rows={2} />
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
-              <Button
-                className="w-full"
-                onClick={handleRegister}
-                disabled={loading || !regName.trim()}
-              >
+              <Button className="w-full" onClick={handleRegister} disabled={loading || !regName.trim()}>
                 {loading ? "Registrando..." : "Ver Menú"}
               </Button>
             </CardContent>
@@ -343,26 +321,14 @@ export default function ShopPage() {
   if (view === "order-sent") {
     return (
       <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-sm text-center"
-        >
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm text-center">
           <div className="flex flex-col items-center">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
-            >
+            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, delay: 0.2 }}>
               <CheckCircle2 className="h-20 w-20 text-emerald-500 mb-6" />
             </motion.div>
             <h1 className="text-2xl font-bold text-foreground mb-2">¡Pedido Enviado!</h1>
-            <p className="text-muted-foreground mb-6">
-              Tu pedido está siendo preparado. Te notificaremos cuando esté listo.
-            </p>
-            <Button onClick={() => setView("menu")} variant="outline">
-              Volver al Menú
-            </Button>
+            <p className="text-muted-foreground mb-6">Tu pedido está siendo preparado. Te notificaremos cuando esté listo.</p>
+            <Button onClick={() => setView("menu")} variant="outline">Volver al Menú</Button>
           </div>
         </motion.div>
       </div>
@@ -381,12 +347,7 @@ export default function ShopPage() {
             <h1 className="text-lg font-bold text-foreground">Menú</h1>
             <p className="text-xs text-muted-foreground">{customer?.name}</p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setView("cart")}
-            className="relative"
-          >
+          <Button variant="outline" size="sm" onClick={() => setView("cart")} className="relative">
             <ShoppingCart className="h-4 w-4" />
             {getCartItemCount() > 0 && (
               <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
@@ -407,35 +368,26 @@ export default function ShopPage() {
         ) : (
           categories.map((category) => (
             <div key={category}>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                {category}
-              </h2>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">{category}</h2>
               <div className="space-y-2">
                 {menuItems
                   .filter((m) => m.category === category && m.isAvailable)
                   .map((item) => {
                     const isExpanded = expandedItem === item.id;
                     const hasVariants = item.variants && item.variants.length > 0;
+                    const currentVariants = selectedVariants;
 
                     return (
                       <Card key={item.id} className="border-border">
                         <CardContent className="p-4">
                           <div className="flex items-center gap-3">
-                            {item.imageUrl ? (
-                              <img
-                                src={item.imageUrl}
-                                alt={item.name}
-                                className="h-16 w-16 rounded-lg object-cover flex-shrink-0"
-                              />
-                            ) : null}
+                            {item.imageUrl && (
+                              <img src={item.imageUrl} alt={item.name} className="h-16 w-16 rounded-lg object-cover flex-shrink-0" />
+                            )}
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-foreground truncate">{item.name}</p>
-                              {item.description && (
-                                <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-                              )}
-                              <p className="text-sm font-bold text-primary mt-1">
-                                ${item.price.toLocaleString("es-AR")}
-                              </p>
+                              {item.description && <p className="text-xs text-muted-foreground truncate">{item.description}</p>}
+                              <p className="text-sm font-bold text-primary mt-1">${item.price.toLocaleString("es-AR")}</p>
                             </div>
                             <div className="flex items-center gap-2">
                               {hasVariants && (
@@ -446,93 +398,80 @@ export default function ShopPage() {
                                   onClick={() => {
                                     setExpandedItem(isExpanded ? null : item.id);
                                     setSelectedVariants({});
-                                    setSelectedVariants({});
                                   }}
                                 >
                                   {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                 </Button>
                               )}
                               {!hasVariants && (
-                                <Button
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => addToCart(item)}
-                                >
+                                <Button size="sm" className="h-8 w-8 p-0" onClick={() => addToCart(item)}>
                                   <Plus className="h-3 w-3" />
                                 </Button>
                               )}
                             </div>
                           </div>
 
-                          {/* Variant and Extras selectors */}
-                              {isExpanded && hasVariants && (
+                          {/* Variant selectors - multi-select */}
+                          {isExpanded && hasVariants && (
                             <div className="mt-3 pt-3 border-t border-border space-y-3">
-                              {item.variants.map((variant: ProductVariant) => (
-                                <div key={variant.name}>
-                                  <p className="text-xs font-medium text-muted-foreground mb-1.5">{variant.name}</p>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {variant.options.map((option) => {
-                                      const isSelected = selectedVariants[variant.name] === option.name;
-                                      const priceLabel = option.price > 0 ? ` +$${option.price.toLocaleString("es-AR")}` : "";
-                                      const qty = variantQuantities[variant.name] || 1;
-                                      return (
-                                        <div key={option.name} className="flex items-center gap-1">
-                                          <button
-                                            type="button"
-                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                                              isSelected
-                                                ? "bg-primary text-primary-foreground"
-                                                : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                            }`}
-                                            onClick={() => {
-                                              setSelectedVariants((prev) => ({
-                                                ...prev,
-                                                [variant.name]: option.name,
-                                              }));
-                                              setVariantPrices((prev) => ({
-                                                ...prev,
-                                                [variant.name]: option.price,
-                                              }));
-                                            }}
-                                          >
-                                            {option.name}{priceLabel}
-                                          </button>
-                                          {isSelected && (
-                                            <div className="flex items-center gap-0.5 bg-muted rounded-full">
-                                              <button
-                                                type="button"
-                                                className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-muted/80"
-                                                onClick={() => {
-                                                  const newQty = Math.max(1, qty - 1);
-                                                  setVariantQuantities((prev) => ({ ...prev, [variant.name]: newQty }));
-                                                }}
-                                              >
-                                                <Minus className="h-3 w-3" />
-                                              </button>
-                                              <span className="w-5 text-center text-xs font-bold">{qty}</span>
-                                              <button
-                                                type="button"
-                                                className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-muted/80"
-                                                onClick={() => {
-                                                  setVariantQuantities((prev) => ({ ...prev, [variant.name]: qty + 1 }));
-                                                }}
-                                              >
-                                                <Plus className="h-3 w-3" />
-                                              </button>
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    })}
+                              {item.variants.map((variant: ProductVariant) => {
+                                const selectedGroup = currentVariants[variant.name] || {};
+                                return (
+                                  <div key={variant.name}>
+                                    <p className="text-xs font-medium text-muted-foreground mb-1.5">{variant.name}</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {variant.options.map((option) => {
+                                        const qty = selectedGroup[option.name] || 0;
+                                        const isSelected = qty > 0;
+                                        const priceLabel = option.price > 0 ? ` +$${option.price.toLocaleString("es-AR")}` : "";
+                                        return (
+                                          <div key={option.name} className="flex items-center gap-1">
+                                            <button
+                                              type="button"
+                                              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                                                isSelected
+                                                  ? "bg-primary text-primary-foreground"
+                                                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                              }`}
+                                              onClick={() => toggleVariantOption(variant.name, option.name, option.price)}
+                                            >
+                                              {option.name}{priceLabel}
+                                            </button>
+                                            {isSelected && (
+                                              <div className="flex items-center gap-0.5 bg-muted rounded-full">
+                                                <button
+                                                  type="button"
+                                                  className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-muted/80"
+                                                  onClick={() => setVariantOptionQty(variant.name, option.name, qty - 1)}
+                                                >
+                                                  <Minus className="h-3 w-3" />
+                                                </button>
+                                                <span className="w-5 text-center text-xs font-bold">{qty}</span>
+                                                <button
+                                                  type="button"
+                                                  className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-muted/80"
+                                                  onClick={() => setVariantOptionQty(variant.name, option.name, qty + 1)}
+                                                >
+                                                  <Plus className="h-3 w-3" />
+                                                </button>
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                );
+                              })}
 
                               <Button
                                 size="sm"
                                 className="w-full mt-2"
                                 onClick={() => addToCart(item)}
-                                disabled={hasVariants && !item.variants.every((v: ProductVariant) => selectedVariants[v.name])}
+                                disabled={!item.variants.some((v: ProductVariant) => {
+                                  const group = currentVariants[v.name] || {};
+                                  return Object.keys(group).length > 0;
+                                })}
                               >
                                 <Plus className="h-3 w-3 mr-1" />
                                 Agregar
@@ -552,16 +491,8 @@ export default function ShopPage() {
       {/* Cart FAB */}
       <AnimatePresence>
         {cart.length > 0 && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-4 left-4 right-4 z-40 max-w-lg mx-auto"
-          >
-            <Button
-              className="w-full h-14 text-lg shadow-lg"
-              onClick={() => setView("cart")}
-            >
+          <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="fixed bottom-4 left-4 right-4 z-40 max-w-lg mx-auto">
+            <Button className="w-full h-14 text-lg shadow-lg" onClick={() => setView("cart")}>
               <ShoppingCart className="h-5 w-5 mr-2" />
               Ver Carrito ({getCartItemCount()}) — ${getCartTotal().toLocaleString("es-AR")}
             </Button>
@@ -572,13 +503,7 @@ export default function ShopPage() {
       {/* CART MODAL */}
       <AnimatePresence>
         {view === "cart" && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center"
-            onClick={() => setView("menu")}
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center" onClick={() => setView("menu")}>
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
@@ -589,9 +514,7 @@ export default function ShopPage() {
             >
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold">Tu Pedido</h2>
-                <Button variant="ghost" size="sm" onClick={() => setView("menu")}>
-                  Cerrar
-                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setView("menu")}>Cerrar</Button>
               </div>
 
               {cart.length === 0 ? (
@@ -605,20 +528,20 @@ export default function ShopPage() {
                           <p className="font-medium text-sm">{c.item.name}</p>
                           {Object.keys(c.selectedVariants).length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {Object.entries(c.selectedVariants).map(([key, value]) => {
-                                const qty = c.variantQuantities[key] || 1;
-                                const price = c.variantPrices[key] || 0;
-                                return (
-                                  <Badge key={key} variant="secondary" className="text-[10px]">
-                                    {key}: {value}{qty > 1 ? ` x${qty}` : ""}{price > 0 ? ` +$${price * qty}` : ""}
-                                  </Badge>
-                                );
-                              })}
+                              {Object.entries(c.selectedVariants).map(([variantName, options]) =>
+                                Object.entries(options).map(([optionName, qty]) => {
+                                  if (qty <= 0) return null;
+                                  const price = c.variantPrices[variantName]?.[optionName] || 0;
+                                  return (
+                                    <Badge key={`${variantName}-${optionName}`} variant="secondary" className="text-[10px]">
+                                      {optionName}{qty > 1 ? ` x${qty}` : ""}{price > 0 ? ` +$${price * qty}` : ""}
+                                    </Badge>
+                                  );
+                                })
+                              )}
                             </div>
                           )}
-                          <p className="text-xs text-muted-foreground mt-1">
-                            ${c.item.price.toLocaleString("es-AR")} x {c.quantity}
-                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">${c.item.price.toLocaleString("es-AR")} x {c.quantity}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => removeFromCart(index)}>
@@ -628,6 +551,21 @@ export default function ShopPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+
+                  {/* Detalle / Notas */}
+                  <div className="mb-4">
+                    <Label htmlFor="cart-notes" className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
+                      <StickyNote className="h-3.5 w-3.5" />
+                      Detalle del pedido
+                    </Label>
+                    <Textarea
+                      id="cart-notes"
+                      placeholder="Ej: sin azúcar, extra hielo, sin picante..."
+                      value={cartNotes}
+                      onChange={(e) => setCartNotes(e.target.value)}
+                      rows={2}
+                    />
                   </div>
 
                   <div className="flex items-center justify-between py-3 border-t border-border mb-4">
@@ -642,12 +580,7 @@ export default function ShopPage() {
                     </div>
                   )}
 
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    onClick={handlePlaceOrder}
-                    disabled={loading}
-                  >
+                  <Button className="w-full" size="lg" onClick={handlePlaceOrder} disabled={loading}>
                     <Send className="h-4 w-4 mr-2" />
                     {loading ? "Enviando..." : "Enviar Pedido"}
                   </Button>

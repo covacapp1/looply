@@ -71,21 +71,28 @@ export default function OrdersPage() {
     }
 
     const detail = order.items.map((item) => {
-      const variants = item.variantPrices && Object.keys(item.variantPrices).length > 0
-        ? ` (${Object.entries(item.variantPrices).map(([key, price]) => {
-            const qty = item.variantQuantities?.[key] || 1;
-            return `${key}: ${qty > 1 ? `x${qty} ` : ""}$${price * qty}`;
-          }).join(", ")})`
-        : "";
+      const variantParts: string[] = [];
+      if (item.variants) {
+        for (const [variantName, options] of Object.entries(item.variants)) {
+          for (const [optionName, qty] of Object.entries(options)) {
+            if (qty <= 0) continue;
+            const price = item.variantPrices?.[variantName]?.[optionName] || 0;
+            variantParts.push(`${optionName}${qty > 1 ? ` x${qty}` : ""}${price > 0 ? ` +$${price * qty}` : ""}`);
+          }
+        }
+      }
+      const variants = variantParts.length > 0 ? ` (${variantParts.join(", ")})` : "";
       return `${item.name}${variants} x${item.quantity}`;
     }).join("\n");
+
+    const notesPart = order.notes ? `\n\nDetalle: ${order.notes}` : "";
 
     const message = messageTemplate
       .replace("{cliente}", order.customerName || "Cliente")
       .replace("{pedido}", order.id.slice(0, 8))
       .replace("{tiempo}", estimatedTime)
       .replace("{total}", `$${order.total.toLocaleString("es-AR")}`)
-      .replace("{detalle}", detail);
+      .replace("{detalle}", detail + notesPart);
 
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
@@ -265,20 +272,28 @@ export default function OrdersPage() {
                                 {item.quantity}x {item.name} — ${(item.price * item.quantity).toLocaleString("es-AR")}
                               </p>
                               {item.variants && Object.keys(item.variants).length > 0 && (
-                                <p className="text-xs text-muted-foreground ml-4">
-                                  {Object.entries(item.variants).map(([key, value]) => `${key}: ${value}`).join(" | ")}
-                                </p>
+                                <div className="text-xs text-muted-foreground ml-4 space-y-0.5">
+                                  {Object.entries(item.variants).map(([variantName, options]) =>
+                                    Object.entries(options).map(([optionName, qty]) => {
+                                      if (qty <= 0) return null;
+                                      const price = item.variantPrices?.[variantName]?.[optionName] || 0;
+                                      return (
+                                        <p key={`${variantName}-${optionName}`}>
+                                          {variantName}: {optionName}{qty > 1 ? ` x${qty}` : ""}{price > 0 ? ` +$${price * qty}` : ""}
+                                        </p>
+                                      );
+                                    })
+                                  )}
+                                </div>
                               )}
-                              {item.variantPrices && Object.keys(item.variantPrices).length > 0 && (
-                                <p className="text-xs text-muted-foreground ml-4">
-                                  {Object.entries(item.variantPrices).map(([key, price]) => {
-                                    const qty = item.variantQuantities?.[key] || 1;
-                                    return `${key}: +$${price * qty}${qty > 1 ? ` x${qty}` : ""}`;
-                                  }).join(" | ")}
-                                </p>
+                              {item.notes && (
+                                <p className="text-xs text-muted-foreground ml-4 italic">📝 {item.notes}</p>
                               )}
                             </div>
                           ))}
+                          {order.notes && (
+                            <p className="text-xs text-muted-foreground ml-4 italic border-t border-border pt-1 mt-1">📝 {order.notes}</p>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">

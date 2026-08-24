@@ -109,9 +109,8 @@ export interface OrderItem {
   name: string;
   price: number;
   quantity: number;
-  variants?: Record<string, string>;
-  variantPrices?: Record<string, number>;
-  variantQuantities?: Record<string, number>;
+  variants?: Record<string, Record<string, number>>;
+  variantPrices?: Record<string, Record<string, number>>;
 }
 
 export interface Order {
@@ -123,6 +122,7 @@ export interface Order {
   customerAddress?: string;
   items: OrderItem[];
   total: number;
+  notes?: string;
   status: "pending" | "confirmed" | "cancelled";
   createdAt: Date;
   updatedAt: Date;

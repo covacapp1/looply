@@ -610,8 +610,9 @@ export async function getOrdersByMerchant(merchantId: string): Promise<Order[]> 
 export async function createOrder(order: {
   merchantId: string;
   customerId: string;
-  items: { menuItemId: string; name: string; price: number; quantity: number; variants?: Record<string, string>; variantPrices?: Record<string, number> }[];
+  items: { menuItemId: string; name: string; price: number; quantity: number; variants?: Record<string, Record<string, number>>; variantPrices?: Record<string, Record<string, number>> }[];
   total: number;
+  notes?: string;
 }): Promise<Order | null> {
   if (!isSupabaseConfigured() || !supabase) return null;
 
@@ -622,6 +623,7 @@ export async function createOrder(order: {
       customer_id: order.customerId,
       items: order.items,
       total: order.total,
+      notes: order.notes || null,
     })
     .select()
     .single();
@@ -637,6 +639,7 @@ export async function createOrder(order: {
     customerId: data.customer_id,
     items: data.items,
     total: data.total,
+    notes: data.notes,
     status: data.status,
     createdAt: new Date(data.created_at),
     updatedAt: new Date(data.updated_at),
