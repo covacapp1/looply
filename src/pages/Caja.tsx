@@ -10,14 +10,15 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Wallet, TrendingUp, ShoppingCart, PlusCircle, DollarSign, Lock, Unlock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getSalesByMerchant, createSale, getMenuItems, getOpenRegister, openRegister, closeRegister } from "@/services/supabase";
-import type { Sale, MenuItem, DailyRegister, ProductVariant } from "@/types";
+import { getSalesByMerchant, createSale, getMenuItems, getOpenRegister, openRegister, closeRegister, getOrdersByMerchant } from "@/services/supabase";
+import type { Sale, MenuItem, DailyRegister, ProductVariant, Order } from "@/types";
 import { toast } from "sonner";
 
 export default function CajaPage() {
   const { user } = useAuth();
   const [sales, setSales] = useState<Sale[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [register, setRegister] = useState<DailyRegister | null>(null);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,14 +42,16 @@ export default function CajaPage() {
 
   const loadData = useCallback(async () => {
     if (!user) return;
-    const [salesData, menuData, reg] = await Promise.all([
+    const [salesData, menuData, reg, ordersData] = await Promise.all([
       getSalesByMerchant(user.id),
       getMenuItems(user.id),
       getOpenRegister(user.id),
+      getOrdersByMerchant(user.id),
     ]);
     setSales(salesData);
     setMenuItems(menuData);
     setRegister(reg);
+    setOrders(ordersData);
     setLoading(false);
   }, [user]);
 
@@ -143,9 +146,42 @@ export default function CajaPage() {
   const todaySales = register
     ? sales.filter((s) => new Date(s.createdAt) >= register.openedAt)
     : sales.filter((s) => new Date(s.createdAt).toDateString() === new Date().toDateString());
+
+  const todayOrders = register
+    ? orders.filter((o) => new Date(o.createdAt) >= register.openedAt && o.status === "confirmed")
+    : orders.filter((o) => new Date(o.createdAt).toDateString() === new Date().toDateString() && o.status === "confirmed");
+
   const totalVentas = todaySales.reduce((sum, s) => sum + s.amount, 0);
-  const orderSales = todaySales.filter((s) => s.type === "order").length;
-  const manualSalesCount = todaySales.filter((s) => s.type === "manual").length;
+
+  // Calculate cost from order items matched to menu items
+  let totalCost = 0;
+  for (const order of todayOrders) {
+    for (const item of order.items) {
+      const menuItem = menuItems.find((m) => m.id === item.menuItemId);
+      const unitCost = menuItem?.cost || 0;
+      let variantCost = 0;
+      if (item.variantPrices && item.variants) {
+        for (const [variantName, options] of Object.entries(item.variants)) {
+          for (const [optionName, qty] of Object.entries(options)) {
+            const option = menuItem?.variants
+              ?.find((v) => v.name === variantName)
+              ?.options.find((o) => o.name === optionName);
+            if (option) variantCost += option.cost * qty;
+          }
+        }
+      }
+      totalCost += (unitCost + variantCost) * item.quantity;
+    }
+  }
+
+  // Manual sales cost (custom sales have no cost)
+  const manualSalesTotal = todaySales
+    .filter((s) => s.type === "manual")
+    .reduce((sum, s) => sum + s.amount, 0);
+
+  const beneficio = totalVentas - totalCost;
+  const pedidosCount = todayOrders.length;
+  const ventasCount = todaySales.length;
 
   return (
     <div>
@@ -322,7 +358,7 @@ export default function CajaPage() {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <Card className="border-border">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -330,7 +366,7 @@ export default function CajaPage() {
                 <DollarSign className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Total Ventas</p>
+                <p className="text-xs text-muted-foreground">Total</p>
                 <p className="text-lg font-bold text-foreground">${totalVentas.toLocaleString("es-AR")}</p>
               </div>
             </div>
@@ -343,8 +379,8 @@ export default function CajaPage() {
                 <ShoppingCart className="h-5 w-5 text-violet-600" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Del Link</p>
-                <p className="text-lg font-bold text-foreground">{orderSales}</p>
+                <p className="text-xs text-muted-foreground">Pedidos</p>
+                <p className="text-lg font-bold text-foreground">{pedidosCount}</p>
               </div>
             </div>
           </CardContent>
@@ -356,13 +392,42 @@ export default function CajaPage() {
                 <Wallet className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Carga Manual</p>
-                <p className="text-lg font-bold text-foreground">{manualSalesCount}</p>
+                <p className="text-xs text-muted-foreground">Ventas</p>
+                <p className="text-lg font-bold text-foreground">{ventasCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-rose-100 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-rose-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Beneficio</p>
+                <p className="text-lg font-bold text-foreground">${beneficio.toLocaleString("es-AR")}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Cost detail */}
+      <Card className="border-border mb-6">
+        <CardContent className="p-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Costo</span>
+              <span className="text-sm font-bold text-foreground">${totalCost.toLocaleString("es-AR")}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Efectivo</span>
+              <span className="text-sm font-bold text-foreground">${totalVentas.toLocaleString("es-AR")}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Sales List */}
       {loading ? (
@@ -430,10 +495,10 @@ export default function CajaPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-foreground">
-                        +${sale.amount.toLocaleString("es-AR")}
+                        ${sale.amount.toLocaleString("es-AR")}
                       </p>
                       <Badge variant="outline" className="text-[10px]">
-                        {sale.type === "order" ? "Link" : "Manual"}
+                        {sale.type === "order" ? "Pedido" : "Manual"}
                       </Badge>
                     </div>
                   </CardContent>
