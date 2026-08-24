@@ -387,7 +387,11 @@ export default function ShopPage() {
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-foreground truncate">{item.name}</p>
                               {item.description && <p className="text-xs text-muted-foreground truncate">{item.description}</p>}
-                              <p className="text-sm font-bold text-primary mt-1">${item.price.toLocaleString("es-AR")}</p>
+                              <p className="text-sm font-bold text-primary mt-1">
+                                ${hasVariants
+                                  ? Math.min(...item.variants!.flatMap((v) => v.options.map((o) => o.price))).toLocaleString("es-AR")
+                                  : item.price.toLocaleString("es-AR")}
+                              </p>
                             </div>
                             <div className="flex items-center gap-2">
                               {hasVariants && (
