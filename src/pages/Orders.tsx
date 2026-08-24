@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ClipboardList, Clock, CheckCircle2, XCircle, Copy, ExternalLink, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getOrdersByMerchant, updateOrderStatus, createSale, createCuentaCorriente, getBusinessSettings, saveBusinessSettings } from "@/services/supabase";
+import { getOrdersByMerchant, updateOrderStatus, createSale, createCuentaCorriente, getBusinessSettings, saveBusinessSettings, getOpenRegister } from "@/services/supabase";
 import type { Order } from "@/types";
 import { toast } from "sonner";
 
@@ -102,6 +102,13 @@ export default function OrdersPage() {
   async function handleConfirm(order: Order) {
     if (!user) return;
     setUpdatingId(order.id);
+
+    const register = await getOpenRegister(user.id);
+    if (!register) {
+      toast.error("No podés confirmar pedidos sin haber abierto la caja");
+      setUpdatingId(null);
+      return;
+    }
 
     const sale = await createSale({
       merchantId: user.id,
