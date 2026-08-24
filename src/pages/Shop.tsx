@@ -419,40 +419,50 @@ export default function ShopPage() {
                                 return (
                                   <div key={variant.name}>
                                     <p className="text-xs font-medium text-muted-foreground mb-1.5">{variant.name}</p>
-                                    <div className="flex flex-wrap gap-1.5">
+                                    <div className="space-y-1.5">
                                       {variant.options.map((option) => {
                                         const qty = selectedGroup[option.name] || 0;
                                         const isSelected = qty > 0;
                                         const priceLabel = option.price > 0 ? ` +$${option.price.toLocaleString("es-AR")}` : "";
                                         return (
-                                          <div key={option.name} className="flex items-center gap-1">
-                                            <button
-                                              type="button"
-                                              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                                                isSelected
-                                                  ? "bg-primary text-primary-foreground"
-                                                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                              }`}
-                                              onClick={() => toggleVariantOption(variant.name, option.name, option.price)}
-                                            >
-                                              {option.name}{priceLabel}
-                                            </button>
-                                            {isSelected && (
-                                              <div className="flex items-center gap-0.5 bg-muted rounded-full">
+                                          <div
+                                            key={option.name}
+                                            className={`flex items-center justify-between rounded-xl px-3 py-2 transition-colors ${
+                                              isSelected
+                                                ? "bg-primary/10 border border-primary/30"
+                                                : "bg-muted/50 border border-transparent"
+                                            }`}
+                                          >
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-sm font-medium text-foreground truncate">{option.name}</p>
+                                              {option.price > 0 && (
+                                                <p className="text-xs text-primary font-medium">{priceLabel}</p>
+                                              )}
+                                            </div>
+                                            {!isSelected ? (
+                                              <button
+                                                type="button"
+                                                className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0"
+                                                onClick={() => toggleVariantOption(variant.name, option.name, option.price)}
+                                              >
+                                                <Plus className="h-4 w-4" />
+                                              </button>
+                                            ) : (
+                                              <div className="flex items-center gap-1 bg-primary rounded-full flex-shrink-0">
                                                 <button
                                                   type="button"
-                                                  className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-muted/80"
+                                                  className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-primary/80 text-primary-foreground"
                                                   onClick={() => setVariantOptionQty(variant.name, option.name, qty - 1)}
                                                 >
-                                                  <Minus className="h-3 w-3" />
+                                                  <Minus className="h-4 w-4" />
                                                 </button>
-                                                <span className="w-5 text-center text-xs font-bold">{qty}</span>
+                                                <span className="w-6 text-center text-sm font-bold text-primary-foreground">{qty}</span>
                                                 <button
                                                   type="button"
-                                                  className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-muted/80"
+                                                  className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-primary/80 text-primary-foreground"
                                                   onClick={() => setVariantOptionQty(variant.name, option.name, qty + 1)}
                                                 >
-                                                  <Plus className="h-3 w-3" />
+                                                  <Plus className="h-4 w-4" />
                                                 </button>
                                               </div>
                                             )}
