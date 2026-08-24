@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { CreditCard, Globe, DollarSign, Bell, BellOff, BellRing, Loader2, AlertCircle, Download, Smartphone, CheckCircle2, Save } from "lucide-react";
+import { CreditCard, Globe, DollarSign, Bell, BellOff, BellRing, Loader2, AlertCircle, Download, Smartphone, CheckCircle2, Save, ExternalLink } from "lucide-react";
 import { isPushSupported, getPermissionState, subscribePush, unsubscribePush, isSubscribed, getSWRegistration } from "@/services/push";
 import { getBusinessSettings, saveBusinessSettings, type BusinessSettings } from "@/services/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +18,7 @@ const defaultSettings: BusinessSettings = {
   address: "", city: "", country: "", website: "",
   instagram: "", facebook: "", whatsapp: "",
   orderMessage: "", orderTime: "30", openTime: "09:00", closeTime: "22:00",
+  planStart: "", planMonths: 6, paymentMethod: "", mercadopagoLink: "", paypalLink: "",
 };
 
 export default function SettingsPage() {
@@ -241,7 +242,7 @@ export default function SettingsPage() {
                   <p>✓ Tarjetas de fidelidad ilimitadas</p>
                   <p>✓ Clientes ilimitados</p>
                   <p>✓ Menú digital</p>
-                  <p>✓ Notificaciones WhatsApp</p>
+                  <p>✓ Pedidos online</p>
                   <p>✓ Notificaciones Push</p>
                   <p>✓ Reportes y estadísticas</p>
                 </div>
@@ -252,57 +253,71 @@ export default function SettingsPage() {
           <Card className="border-border">
             <CardHeader>
               <CardTitle>Método de Pago</CardTitle>
-              <CardDescription>Vinculá tu cuenta para recibir pagos</CardDescription>
+              <CardDescription>Configurá tu link de pago para que tus clientes te paguen la suscripción</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-xl border border-border p-4 hover:border-primary/50 transition-colors cursor-pointer">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <CreditCard className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">Argentina</p>
-                      <p className="text-xs text-muted-foreground">Pago en ARS</p>
-                    </div>
+              <div className="rounded-xl border border-border p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <CreditCard className="h-5 w-5 text-blue-600" />
                   </div>
-                  <div className="rounded-lg bg-muted/50 p-3">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-primary" />
-                      <p className="text-sm font-medium">Mercado Pago</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Vinculá tu cuenta de Mercado Pago para recibir pagos en pesos argentinos
-                    </p>
+                  <div>
+                    <p className="font-medium text-foreground">Mercado Pago</p>
+                    <p className="text-xs text-muted-foreground">$15.000 ARS / mes</p>
                   </div>
-                  <Button variant="outline" className="w-full mt-3" size="sm">
-                    Pagar Mercado Pago
-                  </Button>
                 </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Link de cobro</Label>
+                  <Input
+                    placeholder="https://www.mercadopago.com.ar/..."
+                    value={settings.mercadopagoLink}
+                    onChange={(e) => updateSettings("mercadopagoLink", e.target.value)}
+                  />
+                  <p className="text-[10px] text-muted-foreground">Pegá el link de cobro periódico de Mercado Pago</p>
+                </div>
+                {settings.mercadopagoLink && (
+                  <Button
+                    variant="outline"
+                    className="w-full mt-3"
+                    size="sm"
+                    onClick={() => window.open(settings.mercadopagoLink, "_blank")}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                    Pagar con Mercado Pago
+                  </Button>
+                )}
+              </div>
 
-                <div className="rounded-xl border border-border p-4 hover:border-primary/50 transition-colors cursor-pointer">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <Globe className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">Internacional</p>
-                      <p className="text-xs text-muted-foreground">Pago en USD</p>
-                    </div>
+              <div className="rounded-xl border border-border p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <Globe className="h-5 w-5 text-blue-600" />
                   </div>
-                  <div className="rounded-lg bg-muted/50 p-3">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-primary" />
-                      <p className="text-sm font-medium">PayPal</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Vinculá tu cuenta de PayPal para recibir pagos en dólares
-                    </p>
+                  <div>
+                    <p className="font-medium text-foreground">PayPal</p>
+                    <p className="text-xs text-muted-foreground">$10 USD / mes</p>
                   </div>
-                  <Button variant="outline" className="w-full mt-3" size="sm">
-                    Pagar PayPal
-                  </Button>
                 </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Link de cobro</Label>
+                  <Input
+                    placeholder="https://www.paypal.com/..."
+                    value={settings.paypalLink}
+                    onChange={(e) => updateSettings("paypalLink", e.target.value)}
+                  />
+                  <p className="text-[10px] text-muted-foreground">Pegá el link de suscripción de PayPal</p>
+                </div>
+                {settings.paypalLink && (
+                  <Button
+                    variant="outline"
+                    className="w-full mt-3"
+                    size="sm"
+                    onClick={() => window.open(settings.paypalLink, "_blank")}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                    Pagar con PayPal
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

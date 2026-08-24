@@ -862,6 +862,12 @@ export interface BusinessSettings {
   orderTime: string;
   openTime: string;
   closeTime: string;
+  // Subscription
+  planStart: string;
+  planMonths: number;
+  paymentMethod: "" | "mercadopago" | "paypal";
+  mercadopagoLink: string;
+  paypalLink: string;
 }
 
 const defaultSettings: BusinessSettings = {
@@ -881,6 +887,11 @@ const defaultSettings: BusinessSettings = {
   orderTime: "30",
   openTime: "09:00",
   closeTime: "22:00",
+  planStart: "",
+  planMonths: 6,
+  paymentMethod: "",
+  mercadopagoLink: "",
+  paypalLink: "",
 };
 
 export async function getBusinessSettings(userId: string): Promise<BusinessSettings> {
@@ -917,6 +928,11 @@ export async function getBusinessSettings(userId: string): Promise<BusinessSetti
     orderTime: data.order_time || defaultSettings.orderTime,
     openTime: data.open_time || defaultSettings.openTime,
     closeTime: data.close_time || defaultSettings.closeTime,
+    planStart: data.plan_start || "",
+    planMonths: data.plan_months || 6,
+    paymentMethod: data.payment_method || "",
+    mercadopagoLink: data.mercadopago_link || "",
+    paypalLink: data.paypal_link || "",
   };
 
   localStorage.setItem("businessSettings", JSON.stringify(settings));
@@ -949,6 +965,11 @@ export async function saveBusinessSettings(userId: string, settings: BusinessSet
       order_time: settings.orderTime,
       open_time: settings.openTime,
       close_time: settings.closeTime,
+      plan_start: settings.planStart,
+      plan_months: settings.planMonths,
+      payment_method: settings.paymentMethod,
+      mercadopago_link: settings.mercadopagoLink,
+      paypal_link: settings.paypalLink,
       updated_at: new Date().toISOString(),
     }, { onConflict: "user_id" });
 

@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { SubscriptionGuard } from "@/components/SubscriptionGuard";
 import LoginPage from "@/pages/Login";
 import DashboardPage from "@/pages/Dashboard";
 import LoyaltyPage from "@/pages/Loyalty";
@@ -95,7 +96,9 @@ export default function App() {
             <Route
               element={
                 <ProtectedRoute>
-                  <AppLayout />
+                  <SubscriptionGuard>
+                    <AppLayout />
+                  </SubscriptionGuard>
                 </ProtectedRoute>
               }
             >
