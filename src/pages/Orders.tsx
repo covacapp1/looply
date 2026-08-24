@@ -284,15 +284,16 @@ export default function OrdersPage() {
                                 }
                               }
                             }
-                            const hasVariantPrices = Object.keys(item.variants || {}).length > 0;
+                            const itemTotal = (item.price + variantTotal) * item.quantity;
+                            const hasVariants = item.variants && Object.keys(item.variants).length > 0;
                             return (
                               <div key={i}>
                                 <p>
                                   {item.quantity}x {item.name}
                                 </p>
-                                {hasVariantPrices ? (
+                                {hasVariants ? (
                                   <div className="text-xs text-muted-foreground ml-4 space-y-0.5">
-                                    {Object.entries(item.variants).flatMap(([variantName, options]) =>
+                                    {Object.entries(item.variants || {}).flatMap(([variantName, options]) =>
                                       Object.entries(options).map(([optionName, qty]) => {
                                         if (qty <= 0) return null;
                                         const price = item.variantPrices?.[variantName]?.[optionName] || 0;
