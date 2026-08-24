@@ -71,6 +71,11 @@ export default function LoginPage() {
           orderTime: "30",
           openTime: "09:00",
           closeTime: "22:00",
+          planStart: new Date().toISOString(),
+          planMonths: 6,
+          paymentMethod: "",
+          mercadopagoLink: "",
+          paypalLink: "",
         });
       }
       setError("Cuenta creada. Iniciá sesión.");

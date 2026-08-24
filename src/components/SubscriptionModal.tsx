@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CreditCard, ExternalLink, Clock } from "lucide-react";
@@ -10,18 +10,46 @@ interface SubscriptionModalProps {
   daysLeft: number;
 }
 
+declare global {
+  interface Window {
+    paypal?: any;
+  }
+}
+
 export function SubscriptionModal({ isOpen, mercadopagoLink, paypalLink, daysLeft }: SubscriptionModalProps) {
   const [selectedMethod, setSelectedMethod] = useState<"mercadopago" | "paypal" | null>(null);
+  const paypalRef = useRef<HTMLDivElement>(null);
+  const paypalRendered = useRef(false);
 
-  const handlePay = () => {
-    if (selectedMethod === "mercadopago" && mercadopagoLink) {
+  useEffect(() => {
+    if (selectedMethod === "paypal" && paypalRef.current && !paypalRendered.current) {
+      renderPayPalButton();
+    }
+  }, [selectedMethod]);
+
+  useEffect(() => {
+    paypalRendered.current = false;
+  }, [isOpen]);
+
+  function renderPayPalButton() {
+    if (!window.paypal || !paypalRef.current) {
+      setTimeout(renderPayPalButton, 500);
+      return;
+    }
+
+    paypalRef.current.innerHTML = "";
+    paypalRendered.current = true;
+
+    window.paypal.HostedButtons({
+      hostedButtonId: "F5QJ3NFVJCY7Q",
+    }).render(paypalRef.current);
+  }
+
+  const handleMercadoPago = () => {
+    if (mercadopagoLink) {
       window.open(mercadopagoLink, "_blank");
-    } else if (selectedMethod === "paypal" && paypalLink) {
-      window.open(paypalLink, "_blank");
     }
   };
-
-  const showWarning = daysLeft <= 7 && daysLeft > 0;
 
   return (
     <Dialog open={isOpen}>
@@ -94,11 +122,17 @@ export function SubscriptionModal({ isOpen, mercadopagoLink, paypalLink, daysLef
             </button>
           </div>
 
-          {selectedMethod && (
-            <Button className="w-full" size="lg" onClick={handlePay}>
+          {selectedMethod === "mercadopago" && (
+            <Button className="w-full" size="lg" onClick={handleMercadoPago}>
               <ExternalLink className="h-4 w-4 mr-2" />
-              Pagar con {selectedMethod === "mercadopago" ? "Mercado Pago" : "PayPal"}
+              Pagar con Mercado Pago
             </Button>
+          )}
+
+          {selectedMethod === "paypal" && (
+            <div className="flex justify-center">
+              <div ref={paypalRef} />
+            </div>
           )}
 
           <p className="text-xs text-muted-foreground text-center">
