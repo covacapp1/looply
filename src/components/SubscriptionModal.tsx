@@ -22,7 +22,8 @@ export function SubscriptionModal({ isOpen, mercadopagoLink, paypalLink, daysLef
   const paypalRendered = useRef(false);
 
   useEffect(() => {
-    if (selectedMethod === "paypal" && paypalRef.current && !paypalRendered.current) {
+    if (selectedMethod === "paypal" && paypalRef.current) {
+      paypalRendered.current = false;
       renderPayPalButton();
     }
   }, [selectedMethod]);
@@ -31,9 +32,10 @@ export function SubscriptionModal({ isOpen, mercadopagoLink, paypalLink, daysLef
     paypalRendered.current = false;
   }, [isOpen]);
 
-  function renderPayPalButton() {
-    if (!window.paypal || !paypalRef.current) {
-      setTimeout(renderPayPalButton, 500);
+  function renderPayPalButton(retries = 0) {
+    if (!paypalRef.current) return;
+    if (!window.paypal) {
+      if (retries < 20) setTimeout(() => renderPayPalButton(retries + 1), 300);
       return;
     }
 
