@@ -508,7 +508,7 @@ export async function findShopCustomer(merchantId: string, phone: string): Promi
     .eq("phone", phone)
     .maybeSingle();
 
-  if (!shopError && shopData) {
+  if (shopData) {
     return {
       id: shopData.id,
       merchantId: shopData.merchant_id,
@@ -521,20 +521,24 @@ export async function findShopCustomer(merchantId: string, phone: string): Promi
   }
 
   // Si no se encontró, buscar en customers (tabla de fidelidad) por teléfono
-  const { data: loyaltyData } = await supabase
-    .from("customers")
-    .select("*")
-    .eq("phone", phone)
-    .maybeSingle();
+  // Usar try-catch por si la tabla no existe o tiene RLS
+  try {
+    const { data: loyaltyData } = await supabase
+      .from("customers")
+      .select("*")
+      .eq("phone", phone)
+      .maybeSingle();
 
-  if (loyaltyData) {
-    // Auto-registrar en shop_customers para que aparezca en el shop
-    const newCustomer = await createShopCustomer({
-      merchantId,
-      phone: loyaltyData.phone,
-      name: `${loyaltyData.first_name} ${loyaltyData.last_name}`,
-    });
-    return newCustomer;
+    if (loyaltyData) {
+      const newCustomer = await createShopCustomer({
+        merchantId,
+        phone: loyaltyData.phone,
+        name: `${loyaltyData.first_name} ${loyaltyData.last_name}`,
+      });
+      return newCustomer;
+    }
+  } catch (e) {
+    // customers table might not exist, just continue
   }
 
   return null;
