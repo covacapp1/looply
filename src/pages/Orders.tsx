@@ -273,26 +273,38 @@ export default function OrdersPage() {
                         </div>
 
                         <div className="text-sm text-muted-foreground mb-3 space-y-1">
-                          {order.items.map((item, i) => (
-                            <div key={i}>
-                              <p>
-                                {item.quantity}x {item.name} — ${(item.price * item.quantity).toLocaleString("es-AR")}
-                              </p>
-                              {item.variants && Object.keys(item.variants).length > 0 && (
-                                <div className="text-xs text-muted-foreground ml-4 space-y-0.5">
-                                  {Object.entries(item.variants).map(([variantName, options]) =>
-                                    Object.entries(options).map(([optionName, qty]) => {
-                                      if (qty <= 0) return null;
-                                      const price = item.variantPrices?.[variantName]?.[optionName] || 0;
-                                      return (
-                                        <p key={`${variantName}-${optionName}`}>
-                                          {variantName}: {optionName}{qty > 1 ? ` x${qty}` : ""}{price > 0 ? ` +$${price * qty}` : ""}
-                                        </p>
-                                      );
-                                    })
-                                  )}
-                                </div>
-                              )}
+                          {order.items.map((item, i) => {
+                            let variantTotal = 0;
+                            if (item.variants) {
+                              for (const [variantName, options] of Object.entries(item.variants)) {
+                                for (const [optionName, qty] of Object.entries(options)) {
+                                  if (qty <= 0) continue;
+                                  const price = item.variantPrices?.[variantName]?.[optionName] || 0;
+                                  variantTotal += price * qty;
+                                }
+                              }
+                            }
+                            const itemTotal = (item.price + variantTotal) * item.quantity;
+                            return (
+                              <div key={i}>
+                                <p>
+                                  {item.quantity}x {item.name}{itemTotal > 0 ? ` — $${itemTotal.toLocaleString("es-AR")}` : ""}
+                                </p>
+                                {item.variants && Object.keys(item.variants).length > 0 && (
+                                  <div className="text-xs text-muted-foreground ml-4 space-y-0.5">
+                                    {Object.entries(item.variants).map(([variantName, options]) =>
+                                      Object.entries(options).map(([optionName, qty]) => {
+                                        if (qty <= 0) return null;
+                                        const price = item.variantPrices?.[variantName]?.[optionName] || 0;
+                                        return (
+                                          <p key={`${variantName}-${optionName}`}>
+                                            {variantName}: {optionName}{qty > 1 ? ` x${qty}` : ""}{price > 0 ? ` +$${price * qty}` : ""}
+                                          </p>
+                                        );
+                                      })
+                                    )}
+                                  </div>
+                                )}
                               {item.notes && (
                                 <p className="text-xs text-muted-foreground ml-4 italic">📝 {item.notes}</p>
                               )}
