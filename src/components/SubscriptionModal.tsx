@@ -134,8 +134,8 @@ export function SubscriptionModal({ isOpen, mercadopagoLink, paypalLink, daysLef
           )}
 
           {selectedMethod === "paypal" && (
-            <div className="flex justify-center min-w-[300px]">
-              <div ref={paypalRef} />
+            <div className="py-3 w-full">
+              <div ref={paypalRef} className="w-full" />
             </div>
           )}
 
