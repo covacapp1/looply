@@ -25,9 +25,9 @@ ALTER TABLE daily_registers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cuenta_corriente ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_notifications ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY; -- table does not exist
+-- notifications: table does not exist, skip
+-- user_notifications: table does not exist, skip
 
 -- ============================================================
 -- 4. DROP EXISTING POLICIES (clean slate, ignore errors)
@@ -114,19 +114,13 @@ EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  DROP POLICY IF EXISTS "push_subscriptions_all" ON push_subscriptions;
+  -- DROP POLICY IF EXISTS "push_subscriptions_all" ON push_subscriptions; -- table does not exist
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
-DO $$ BEGIN
-  DROP POLICY IF EXISTS "notifications_all" ON notifications;
-EXCEPTION WHEN OTHERS THEN NULL;
-END $$;
+-- notifications: table does not exist, skip
 
-DO $$ BEGIN
-  DROP POLICY IF EXISTS "user_notifications_all" ON user_notifications;
-EXCEPTION WHEN OTHERS THEN NULL;
-END $$;
+-- user_notifications: table does not exist, skip
 
 -- ============================================================
 -- 5. CREATE RLS POLICIES
@@ -235,17 +229,8 @@ CREATE POLICY "app_users_insert_public" ON app_users
 CREATE POLICY "app_users_update_public" ON app_users
   FOR UPDATE USING (true);
 
--- ---------- push_subscriptions ----------
--- Public (needed for push notifications)
-CREATE POLICY "push_subscriptions_all" ON push_subscriptions
-  FOR ALL USING (true);
+-- push_subscriptions: table does not exist, skip
 
--- ---------- notifications ----------
--- Public (Edge Function creates them)
-CREATE POLICY "notifications_all" ON notifications
-  FOR ALL USING (true);
+-- notifications: table does not exist, skip
 
--- ---------- user_notifications ----------
--- Public (Edge Function creates them)
-CREATE POLICY "user_notifications_all" ON user_notifications
-  FOR ALL USING (true);
+-- user_notifications: table does not exist, skip

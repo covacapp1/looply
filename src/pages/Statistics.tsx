@@ -34,7 +34,7 @@ export default function StatisticsPage() {
     const { count: fidelidad } = await supabase
       .from("customers")
       .select("id", { count: "exact", head: true })
-      .eq("merchant_id", user.id);
+      .or(`merchant_id.eq.${user.id},merchant_id.is.null`);
 
     setOrders(ordersData);
     setSales(salesData);

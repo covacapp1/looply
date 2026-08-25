@@ -22,7 +22,7 @@ export async function getRewards(merchantId?: string): Promise<LoyaltyReward[]> 
     .order("created_at", { ascending: false });
 
   if (merchantId) {
-    query = query.eq("merchant_id", merchantId);
+    query = query.or(`merchant_id.eq.${merchantId},merchant_id.is.null`);
   }
 
   const { data, error } = await query;
@@ -356,8 +356,8 @@ export async function getBusinessStats(merchantId?: string) {
   let customersQuery = supabase.from("customers").select("id, stamps, is_completed", { count: "exact" });
 
   if (merchantId) {
-    rewardsQuery = rewardsQuery.eq("merchant_id", merchantId);
-    customersQuery = customersQuery.eq("merchant_id", merchantId);
+    rewardsQuery = rewardsQuery.or(`merchant_id.eq.${merchantId},merchant_id.is.null`);
+    customersQuery = customersQuery.or(`merchant_id.eq.${merchantId},merchant_id.is.null`);
   }
 
   const [rewardsResult, customersResult] = await Promise.all([

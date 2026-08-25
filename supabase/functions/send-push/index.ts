@@ -71,13 +71,21 @@ serve(async (req) => {
       );
     }
 
-    // Get subscriptions
-    let query = supabase.from("push_subscriptions").select("*");
-    if (user_id) {
-      query = query.eq("user_id", user_id);
+    // Get subscriptions (table may not exist)
+    let subscriptions: any[] = [];
+    try {
+      let query = supabase.from("push_subscriptions").select("*");
+      if (user_id) {
+        query = query.eq("user_id", user_id);
+      }
+      const { data } = await query;
+      subscriptions = data || [];
+    } catch (subError) {
+      return new Response(
+        JSON.stringify({ sent: 0, message: "Push subscriptions not configured" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
-
-    const { data: subscriptions, error } = await query;
 
     if (error || !subscriptions || subscriptions.length === 0) {
       return new Response(
@@ -114,30 +122,34 @@ serve(async (req) => {
       }
     }
 
-    // Save notification to database
-    const { data: notification } = await supabase
-      .from("notifications")
-      .insert({
-        title,
-        message: body,
-        created_by: user.id,
-      })
-      .select()
-      .single();
+    // Save notification to database (ignore if table doesn't exist)
+    try {
+      const { data: notification } = await supabase
+        .from("notifications")
+        .insert({
+          title,
+          message: body,
+          created_by: user.id,
+        })
+        .select()
+        .single();
 
-    // Create user notifications for all users
-    if (notification) {
-      const { data: allUsers } = await supabase
-        .from("app_users")
-        .select("id");
+      // Create user notifications for all users
+      if (notification) {
+        const { data: allUsers } = await supabase
+          .from("app_users")
+          .select("id");
 
-      if (allUsers) {
-        const userNotifications = allUsers.map((u) => ({
-          user_id: u.id,
-          notification_id: notification.id,
-        }));
-        await supabase.from("user_notifications").insert(userNotifications);
+        if (allUsers) {
+          const userNotifications = allUsers.map((u) => ({
+            user_id: u.id,
+            notification_id: notification.id,
+          }));
+          await supabase.from("user_notifications").insert(userNotifications);
+        }
       }
+    } catch (notifError) {
+      // notifications/user_notifications tables may not exist, continue
     }
 
     return new Response(
