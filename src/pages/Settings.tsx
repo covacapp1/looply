@@ -54,11 +54,15 @@ export default function SettingsPage() {
   }, [activeTab]);
 
   function renderPayPalButton(retries = 0) {
-    if (!paypalRef.current) return;
-    if (!window.paypal) {
-      if (retries < 20) setTimeout(() => renderPayPalButton(retries + 1), 300);
+    if (!paypalRef.current) {
+      if (retries < 30) setTimeout(() => renderPayPalButton(retries + 1), 100);
       return;
     }
+    if (!window.paypal) {
+      if (retries < 30) setTimeout(() => renderPayPalButton(retries + 1), 300);
+      return;
+    }
+    if (paypalRendered.current) return;
     paypalRef.current.innerHTML = "";
     paypalRendered.current = true;
     window.paypal.HostedButtons({
