@@ -13,13 +13,19 @@ function migrateVariants(variants: any[]): ProductVariant[] {
 }
 
 // Rewards
-export async function getRewards(): Promise<LoyaltyReward[]> {
+export async function getRewards(merchantId?: string): Promise<LoyaltyReward[]> {
   if (!isSupabaseConfigured() || !supabase) return [];
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("loyalty_rewards")
     .select("*")
     .order("created_at", { ascending: false });
+
+  if (merchantId) {
+    query = query.eq("merchant_id", merchantId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching rewards:", error);
@@ -64,13 +70,14 @@ export async function getRewardById(id: string): Promise<LoyaltyReward | null> {
   };
 }
 
-export async function createReward(reward: Omit<LoyaltyReward, "id" | "createdAt">): Promise<LoyaltyReward | null> {
+export async function createReward(reward: Omit<LoyaltyReward, "id" | "createdAt"> & { merchantId?: string }): Promise<LoyaltyReward | null> {
   if (!isSupabaseConfigured() || !supabase) return null;
 
   const { data, error } = await supabase
     .from("loyalty_rewards")
     .insert({
       business_id: reward.businessId,
+      merchant_id: reward.merchantId || null,
       name: reward.name,
       description: reward.description,
       stamps_required: reward.stampsRequired,
@@ -166,6 +173,7 @@ export async function createCustomer(customer: {
   lastName: string;
   phone: string;
   countryCode?: string;
+  merchantId?: string;
 }): Promise<Customer | null> {
   if (!isSupabaseConfigured() || !supabase) return null;
 
@@ -177,6 +185,7 @@ export async function createCustomer(customer: {
       last_name: customer.lastName,
       phone: customer.phone,
       country_code: customer.countryCode || "+54",
+      merchant_id: customer.merchantId || null,
     })
     .select()
     .single();
@@ -338,14 +347,22 @@ export async function addStamp(customerId: string, userId?: string): Promise<Add
 }
 
 // Stats
-export async function getBusinessStats() {
+export async function getBusinessStats(merchantId?: string) {
   if (!isSupabaseConfigured() || !supabase) {
     return { totalRewards: 0, totalCustomers: 0, totalStamps: 0, completedCards: 0 };
   }
 
+  let rewardsQuery = supabase.from("loyalty_rewards").select("id", { count: "exact", head: true });
+  let customersQuery = supabase.from("customers").select("id, stamps, is_completed", { count: "exact" });
+
+  if (merchantId) {
+    rewardsQuery = rewardsQuery.eq("merchant_id", merchantId);
+    customersQuery = customersQuery.eq("merchant_id", merchantId);
+  }
+
   const [rewardsResult, customersResult] = await Promise.all([
-    supabase.from("loyalty_rewards").select("id", { count: "exact", head: true }),
-    supabase.from("customers").select("id, stamps, is_completed", { count: "exact" }),
+    rewardsQuery,
+    customersQuery,
   ]);
 
   return {

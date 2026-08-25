@@ -395,7 +395,7 @@ export default function ShopPage() {
                               {item.description && <p className="text-xs text-muted-foreground truncate">{item.description}</p>}
                               <p className="text-sm font-bold text-primary mt-1">
                                 ${hasVariants
-                                  ? Math.min(...item.variants!.flatMap((v) => v.options.map((o) => o.price))).toLocaleString("es-AR")
+                                  ? (item.variants!.flatMap((v) => v.options.map((o) => o.price)).filter((p) => p > 0).sort((a, b) => a - b)[0] || 0).toLocaleString("es-AR")
                                   : item.price.toLocaleString("es-AR")}
                               </p>
                             </div>

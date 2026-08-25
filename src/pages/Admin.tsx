@@ -99,13 +99,18 @@ export default function AdminPage() {
       // Send via Edge Function
       const { data: { session } } = await supabase.auth.getSession();
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!session?.access_token) {
+        toast.error("No hay sesión activa");
+        setSending(false);
+        return;
+      }
 
       const response = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session?.access_token || supabaseKey}`,
+          "Authorization": `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           title: notificationForm.title,

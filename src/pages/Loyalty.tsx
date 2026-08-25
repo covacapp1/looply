@@ -87,13 +87,14 @@ export default function LoyaltyPage() {
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, []);
+  }, [user]);
 
   async function loadData() {
+    if (!user) return;
     setLoading(true);
     const [rewardsData, statsData] = await Promise.all([
-      getRewards(),
-      getBusinessStats(),
+      getRewards(user.id),
+      getBusinessStats(user.id),
     ]);
 
     setRewards(rewardsData);
@@ -111,6 +112,7 @@ export default function LoyaltyPage() {
   async function handleCreateReward() {
     const reward = await createReward({
       businessId: "1",
+      merchantId: user?.id,
       name: newReward.name,
       description: newReward.description,
       stampsRequired: newReward.stampsRequired,
