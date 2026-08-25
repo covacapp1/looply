@@ -28,6 +28,50 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
+function playCashRegister() {
+  try {
+    const ctx = new self.AudioContext();
+    const now = ctx.currentTime;
+
+    // Ding 1
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = "sine";
+    osc1.frequency.setValueAtTime(2200, now);
+    osc1.frequency.exponentialRampToValueAtTime(1800, now + 0.08);
+    gain1.gain.setValueAtTime(0.3, now);
+    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    osc1.connect(gain1).connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.15);
+
+    // Ding 2 (higher)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(3000, now + 0.1);
+    osc2.frequency.exponentialRampToValueAtTime(2400, now + 0.2);
+    gain2.gain.setValueAtTime(0, now);
+    gain2.gain.setValueAtTime(0.3, now + 0.1);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    osc2.connect(gain2).connect(ctx.destination);
+    osc2.start(now + 0.1);
+    osc2.stop(now + 0.3);
+
+    // Cha-ching click
+    const osc3 = ctx.createOscillator();
+    const gain3 = ctx.createGain();
+    osc3.type = "square";
+    osc3.frequency.setValueAtTime(800, now + 0.2);
+    gain3.gain.setValueAtTime(0, now);
+    gain3.gain.setValueAtTime(0.15, now + 0.2);
+    gain3.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+    osc3.connect(gain3).connect(ctx.destination);
+    osc3.start(now + 0.2);
+    osc3.stop(now + 0.28);
+  } catch (e) {}
+}
+
 // Push Notification
 self.addEventListener("push", (event) => {
   let data = { title: "LOOPLY", body: "", url: "/" };
@@ -39,6 +83,8 @@ self.addEventListener("push", (event) => {
       data.body = event.data.text();
     }
   }
+
+  playCashRegister();
 
   const options = {
     body: data.body,

@@ -2,12 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as webPush from "https://esm.sh/web-push@3.6.7";
 
-const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY") || "";
-const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY") || "";
-const VAPID_EMAIL = Deno.env.get("VAPID_EMAIL") || "mailto:admin@looply.app";
-
-webPush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -21,7 +15,20 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+
+    const VAPID_PUBLIC_KEY = (Deno.env.get("VAPID_PUBLIC_KEY") || "").trim();
+    const VAPID_PRIVATE_KEY = (Deno.env.get("VAPID_PRIVATE_KEY") || "").trim();
+    const VAPID_EMAIL_RAW = Deno.env.get("VAPID_EMAIL") || "covacapp1@gmail.com";
+    const VAPID_EMAIL = VAPID_EMAIL_RAW.startsWith("mailto:") ? VAPID_EMAIL_RAW : `mailto:${VAPID_EMAIL_RAW}`;
+
+    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+      return new Response(
+        JSON.stringify({ error: "VAPID keys not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    webPush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -40,12 +47,18 @@ serve(async (req) => {
       if (user_id) {
         query = query.eq("user_id", user_id);
       }
-      const { data } = await query;
+      const { data, error: queryError } = await query;
+      if (queryError) {
+        return new Response(
+          JSON.stringify({ error: "Query error: " + queryError.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       subscriptions = data || [];
-    } catch (subError) {
+    } catch (subError: any) {
       return new Response(
-        JSON.stringify({ sent: 0, message: "Push subscriptions not configured" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Sub error: " + subError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
