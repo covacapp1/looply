@@ -52,9 +52,7 @@ export function SubscriptionModal({ isOpen, mercadopagoLink, paypalLink, daysLef
   }
 
   const handleMercadoPago = () => {
-    if (mercadopagoLink) {
-      window.open(mercadopagoLink, "_blank");
-    }
+    window.open(mercadopagoLink || "https://mpago.la/1JAkc38", "_blank");
   };
 
   return (
@@ -136,7 +134,7 @@ export function SubscriptionModal({ isOpen, mercadopagoLink, paypalLink, daysLef
           )}
 
           {selectedMethod === "paypal" && (
-            <div className="flex justify-center">
+            <div className="flex justify-center min-w-[300px]">
               <div ref={paypalRef} />
             </div>
           )}

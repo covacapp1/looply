@@ -290,7 +290,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="rounded-xl border border-border p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
                     <CreditCard className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
@@ -307,22 +307,20 @@ export default function SettingsPage() {
                   />
                   <p className="text-[10px] text-muted-foreground">Pegá el link de cobro periódico de Mercado Pago</p>
                 </div>
-                {settings.mercadopagoLink && (
-                  <Button
-                    variant="outline"
-                    className="w-full mt-3"
-                    size="sm"
-                    onClick={() => window.open(settings.mercadopagoLink, "_blank")}
-                  >
-                    <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                    Pagar con Mercado Pago
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  className="w-full mt-3"
+                  size="sm"
+                  onClick={() => window.open(settings.mercadopagoLink || "https://mpago.la/1JAkc38", "_blank")}
+                >
+                  <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                  Pagar con Mercado Pago
+                </Button>
               </div>
 
               <div className="rounded-xl border border-border p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
                     <Globe className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
@@ -330,7 +328,7 @@ export default function SettingsPage() {
                     <p className="text-xs text-muted-foreground">$10 USD / mes</p>
                   </div>
                 </div>
-                <div className="flex justify-center py-3">
+                <div className="flex justify-center py-3 min-w-[300px]">
                   <div ref={paypalRef} />
                 </div>
               </div>
