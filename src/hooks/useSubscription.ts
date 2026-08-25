@@ -32,7 +32,7 @@ export function useSubscription() {
 
     const start = new Date(s.planStart);
     const end = new Date(start);
-    end.setMonth(end.getMonth() + (s.planMonths || 6));
+    end.setMonth(end.getMonth() + (s.planMonths || 3));
 
     const now = new Date();
     const diff = end.getTime() - now.getTime();

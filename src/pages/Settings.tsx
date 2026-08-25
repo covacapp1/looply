@@ -24,7 +24,7 @@ const defaultSettings: BusinessSettings = {
   address: "", city: "", country: "", website: "",
   instagram: "", facebook: "", whatsapp: "",
   orderMessage: "", orderTime: "30", openTime: "09:00", closeTime: "22:00",
-  planStart: "", planMonths: 6, paymentMethod: "", mercadopagoLink: "", paypalLink: "",
+  planStart: "", planMonths: 3, paymentMethod: "", mercadopagoLink: "", paypalLink: "",
 };
 
 export default function SettingsPage() {

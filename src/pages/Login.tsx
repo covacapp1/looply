@@ -72,7 +72,7 @@ export default function LoginPage() {
           openTime: "09:00",
           closeTime: "22:00",
           planStart: new Date().toISOString(),
-          planMonths: 6,
+          planMonths: 3,
           paymentMethod: "",
           mercadopagoLink: "",
           paypalLink: "",
