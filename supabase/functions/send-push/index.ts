@@ -25,43 +25,6 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify JWT is valid using anon key
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
-
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Invalid token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Verify user is admin
-    const { data: profile } = await supabase
-      .from("app_users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile || profile.role !== "admin") {
-      return new Response(
-        JSON.stringify({ error: "Forbidden: admin only" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const { title, body, url, user_id } = await req.json();
 
     if (!title || !body) {
@@ -71,7 +34,6 @@ serve(async (req) => {
       );
     }
 
-    // Get subscriptions (table may not exist)
     let subscriptions: any[] = [];
     try {
       let query = supabase.from("push_subscriptions").select("*");
@@ -87,7 +49,7 @@ serve(async (req) => {
       );
     }
 
-    if (error || !subscriptions || subscriptions.length === 0) {
+    if (!subscriptions || subscriptions.length === 0) {
       return new Response(
         JSON.stringify({ sent: 0, message: "No subscriptions found" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -112,7 +74,6 @@ serve(async (req) => {
         sentCount++;
       } catch (pushError: any) {
         errors.push(pushError.message);
-        // If subscription is invalid, remove it
         if (pushError.statusCode === 404 || pushError.statusCode === 410) {
           await supabase
             .from("push_subscriptions")
@@ -120,36 +81,6 @@ serve(async (req) => {
             .eq("endpoint", sub.endpoint);
         }
       }
-    }
-
-    // Save notification to database (ignore if table doesn't exist)
-    try {
-      const { data: notification } = await supabase
-        .from("notifications")
-        .insert({
-          title,
-          message: body,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      // Create user notifications for all users
-      if (notification) {
-        const { data: allUsers } = await supabase
-          .from("app_users")
-          .select("id");
-
-        if (allUsers) {
-          const userNotifications = allUsers.map((u) => ({
-            user_id: u.id,
-            notification_id: notification.id,
-          }));
-          await supabase.from("user_notifications").insert(userNotifications);
-        }
-      }
-    } catch (notifError) {
-      // notifications/user_notifications tables may not exist, continue
     }
 
     return new Response(

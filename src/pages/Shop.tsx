@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Phone, User, MapPin, StickyNote, Send, Store, ChevronDown, ChevronUp, Clock } from "lucide-react";
 import { findShopCustomer, createShopCustomer, getMenuItems, createOrder, createSale, getBusinessSettings } from "@/services/supabase";
+import { notifyMerchant } from "@/services/push";
 import type { MenuItem, ShopCustomer, ProductVariant } from "@/types";
 
 type ViewState = "phone" | "register" | "menu" | "cart" | "order-sent";
@@ -226,6 +227,15 @@ export default function ShopPage() {
         description: `Pedido de ${customer.name}`,
         type: "order",
       });
+
+      const itemNames = order.items.map((i) => `${i.quantity}x ${i.name}`).join(", ");
+      notifyMerchant(
+        merchantId,
+        "Nuevo pedido",
+        `${customer.name} realizó un pedido: ${itemNames} - $${order.total.toLocaleString("es-AR")}`,
+        "/orders"
+      );
+
       setCart([]);
       setCartNotes("");
       setView("order-sent");

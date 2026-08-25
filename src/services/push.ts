@@ -115,3 +115,22 @@ async function saveSubscription(endpoint: string, p256dh: string, auth: string):
     { onConflict: "user_id,endpoint" }
   );
 }
+
+export async function notifyMerchant(merchantId: string, title: string, body: string, url?: string): Promise<void> {
+  if (!isSupabaseConfigured() || !supabase) return;
+
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!supabaseUrl) return;
+
+    await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title, body, url, user_id: merchantId }),
+    });
+  } catch (error) {
+    console.error("Failed to send push notification:", error);
+  }
+}
