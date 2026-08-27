@@ -59,8 +59,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .eq("id", userId)
       .single();
 
-    console.log("Profile fetched:", data, error, "userId:", userId);
-    setProfile(data);
+    if (!data) {
+      const { data: userData } = await supabase.auth.getUser();
+      const fullName = userData?.user?.user_metadata?.full_name || "";
+      const email = userData?.user?.email || "";
+      await supabase.from("app_users").upsert({
+        id: userId,
+        email: email,
+        role: "user",
+        subscription: "free",
+        full_name: fullName,
+        is_active: true,
+      }, { onConflict: "id" });
+
+      const { data: retryData } = await supabase
+        .from("app_users")
+        .select("role, subscription, full_name")
+        .eq("id", userId)
+        .single();
+
+      setProfile(retryData);
+    } else {
+      setProfile(data);
+    }
     setLoading(false);
   }
 
@@ -75,6 +96,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       options: { data: { full_name: fullName } },
     });
+
+    if (!error && data?.user?.id) {
+      await supabase.from("app_users").upsert({
+        id: data.user.id,
+        email: email,
+        role: "user",
+        subscription: "free",
+        full_name: fullName,
+        is_active: true,
+      }, { onConflict: "id" });
+    }
+
     return { error: error?.message, userId: data?.user?.id };
   }
 
