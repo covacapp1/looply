@@ -24,9 +24,8 @@ export function useSubscription() {
 
   function checkSubscription(s: BusinessSettings) {
     if (!s.planStart) {
-      // No plan start → activate 6 months free from now
       setIsExpired(false);
-      setDaysLeft(180);
+      setDaysLeft(90);
       return;
     }
 

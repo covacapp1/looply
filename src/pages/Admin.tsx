@@ -26,8 +26,10 @@ import {
   Shield,
   Send,
   Smartphone,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getBusinessSettings, type BusinessSettings } from "@/services/supabase";
 
 interface AppUser {
   id: string;
@@ -39,9 +41,14 @@ interface AppUser {
   created_at: string;
 }
 
+interface UserWithTrial extends AppUser {
+  trialDaysLeft?: number;
+  trialExpired?: boolean;
+}
+
 export default function AdminPage() {
   const { profile } = useAuth();
-  const [users, setUsers] = useState<AppUser[]>([]);
+  const [users, setUsers] = useState<UserWithTrial[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showNotification, setShowNotification] = useState(false);
@@ -65,7 +72,27 @@ export default function AdminPage() {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (data) setUsers(data);
+    if (data) {
+      const withTrial = await Promise.all(
+        data.map(async (u) => {
+          try {
+            const settings = await getBusinessSettings(u.id);
+            if (!settings.planStart) {
+              return { ...u, trialDaysLeft: 90, trialExpired: false };
+            }
+            const start = new Date(settings.planStart);
+            const end = new Date(start);
+            end.setMonth(end.getMonth() + (settings.planMonths || 3));
+            const now = new Date();
+            const days = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            return { ...u, trialDaysLeft: days, trialExpired: days <= 0 };
+          } catch {
+            return { ...u, trialDaysLeft: 90, trialExpired: false };
+          }
+        })
+      );
+      setUsers(withTrial);
+    }
     setLoading(false);
   }
 
@@ -76,8 +103,7 @@ export default function AdminPage() {
     setPushSubscriptionsCount(count || 0);
   }
 
-  async function toggleSubscription(userId: string, currentSub: string) {
-    const newSub = currentSub === "lifetime" ? "free" : "lifetime";
+  async function setSubscription(userId: string, newSub: string) {
     await supabase
       .from("app_users")
       .update({ subscription: newSub })
@@ -228,6 +254,19 @@ export default function AdminPage() {
             <Card>
               <CardContent className="p-3">
                 <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-blue-500" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Trials</p>
+                    <p className="text-lg font-bold">
+                      {users.filter((u) => u.subscription === "trial").length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4 text-primary" />
                   <div>
                     <p className="text-xs text-muted-foreground">Admins</p>
@@ -291,34 +330,59 @@ export default function AdminPage() {
                             </Badge>
                           )}
                           <Badge
-                            variant={user.subscription === "lifetime" ? "default" : "secondary"}
+                            variant={user.subscription === "lifetime" ? "default" : user.subscription === "trial" ? "secondary" : "outline"}
                             className={
                               user.subscription === "lifetime"
                                 ? "bg-amber-500 text-white"
+                                : user.subscription === "trial"
+                                ? "bg-blue-500 text-white"
                                 : ""
                             }
                           >
-                            {user.subscription === "lifetime" ? "Lifetime" : "Free"}
+                            {user.subscription === "lifetime"
+                              ? "Lifetime"
+                              : user.subscription === "trial"
+                              ? "Trial"
+                              : user.subscription || "Sin plan"}
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">{user.email}</p>
+                        {user.subscription === "trial" && user.trialDaysLeft !== undefined && (
+                          <p className="text-xs mt-1">
+                            {user.trialExpired ? (
+                              <span className="text-red-500 font-medium">Trial expirado</span>
+                            ) : (
+                              <span className="text-blue-500">
+                                Trial: {user.trialDaysLeft} días restantes
+                              </span>
+                            )}
+                          </p>
+                        )}
                         <p className="text-xs text-muted-foreground mt-1">
                           Registro: {new Date(user.created_at).toLocaleDateString("es-AR")}
                         </p>
                       </div>
                       <div className="flex gap-1 shrink-0">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleSubscription(user.id, user.subscription)}
-                          title={
-                            user.subscription === "lifetime"
-                              ? "Quitar Lifetime"
-                              : "Dar Lifetime"
-                          }
-                        >
-                          <Gift className="h-4 w-4" />
-                        </Button>
+                        {user.subscription !== "lifetime" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSubscription(user.id, "lifetime")}
+                            title="Dar Lifetime"
+                          >
+                            <Crown className="h-4 w-4 text-amber-500" />
+                          </Button>
+                        )}
+                        {user.subscription === "lifetime" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSubscription(user.id, "trial")}
+                            title="Volver a Trial"
+                          >
+                            <Gift className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"

@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: userId,
         email: email,
         role: "user",
-        subscription: "free",
+        subscription: "trial",
         full_name: fullName,
         is_active: true,
       }, { onConflict: "id" });
@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: data.user.id,
         email: email,
         role: "user",
-        subscription: "free",
+        subscription: "trial",
         full_name: fullName,
         is_active: true,
       }, { onConflict: "id" });
