@@ -15,8 +15,7 @@ export function MobileNav() {
     { label: "Clientes", href: "/customers", icon: Users },
     ...(isAdmin
       ? [{ label: "Admin", href: "/admin", icon: Shield }]
-      : [{ label: "Config", href: "/settings", icon: Settings }],
-    ),
+      : [{ label: "Config", href: "/settings", icon: Settings }])
   ];
 
   return (
