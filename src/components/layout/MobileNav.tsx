@@ -1,16 +1,23 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Heart, Users, Shield } from "lucide-react";
+import { LayoutDashboard, Heart, Users, Shield, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const mobileNavItems = [
-  { label: "Menú", href: "/", icon: LayoutDashboard },
-  { label: "Fidelidad", href: "/loyalty", icon: Heart },
-  { label: "Clientes", href: "/customers", icon: Users },
-  { label: "Admin", href: "/admin", icon: Shield },
-];
+import { useAuth } from "@/contexts/AuthContext";
 
 export function MobileNav() {
   const location = useLocation();
+  const { profile } = useAuth();
+
+  const isAdmin = profile?.role === "admin";
+
+  const mobileNavItems = [
+    { label: "Menú", href: "/", icon: LayoutDashboard },
+    { label: "Fidelidad", href: "/loyalty", icon: Heart },
+    { label: "Clientes", href: "/customers", icon: Users },
+    ...(isAdmin
+      ? [{ label: "Admin", href: "/admin", icon: Shield }]
+      : [{ label: "Config", href: "/settings", icon: Settings }],
+    ),
+  ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-sm lg:hidden">
