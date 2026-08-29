@@ -33,6 +33,7 @@ import {
 import { generateStampCardImage } from "@/components/loyalty/StampCardImageGenerator";
 import { uploadStampCardImage, ensureBucketExists } from "@/services/imageService";
 import { useAuth } from "@/contexts/AuthContext";
+import { getBusinessSettings } from "@/services/supabase";
 import type { LoyaltyReward, Customer, StampHistory } from "@/types";
 import {
   Plus,
@@ -56,6 +57,7 @@ export default function LoyaltyPage() {
   const [customers, setCustomers] = useState<Record<string, Customer[]>>({});
   const [stats, setStats] = useState({ totalRewards: 0, totalCustomers: 0, totalStamps: 0, completedCards: 0 });
   const [loading, setLoading] = useState(true);
+  const [businessName, setBusinessName] = useState("");
 
   const [showCreateReward, setShowCreateReward] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
@@ -92,13 +94,15 @@ export default function LoyaltyPage() {
   async function loadData() {
     if (!user) return;
     setLoading(true);
-    const [rewardsData, statsData] = await Promise.all([
+    const [rewardsData, statsData, settings] = await Promise.all([
       getRewards(user.id),
       getBusinessStats(user.id),
+      getBusinessSettings(user.id),
     ]);
 
     setRewards(rewardsData);
     setStats(statsData);
+    setBusinessName(settings.name || "");
 
     // Load customers for each reward
     const customersMap: Record<string, Customer[]> = {};
@@ -635,7 +639,7 @@ export default function LoyaltyPage() {
               return (
                 <StampCardVisual
                   customerName={`${selectedCustomer.firstName} ${selectedCustomer.lastName}`}
-                  businessName={reward.name}
+                  businessName={businessName || "Mi Negocio"}
                   stampsRequired={reward.stampsRequired}
                   currentStamps={selectedCustomer.stamps}
                   rewardName={reward.name}
