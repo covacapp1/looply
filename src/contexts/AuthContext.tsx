@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         subscription: "trial",
         full_name: fullName,
         is_active: true,
-      }, { onConflict: "id" });
+      }, { onConflict: "id", ignoreDuplicates: true });
 
       const { data: retryData } = await supabase
         .from("app_users")
