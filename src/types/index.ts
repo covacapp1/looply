@@ -141,6 +141,7 @@ export interface Sale {
   amount: number;
   description: string;
   type: "order" | "manual";
+  paymentMethod: string;
   createdAt: Date;
 }
 

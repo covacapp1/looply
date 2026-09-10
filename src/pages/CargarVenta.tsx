@@ -153,6 +153,7 @@ export default function CargarVentaPage() {
       amount: total,
       description: desc,
       type: "manual",
+      paymentMethod: paymentMethod || "manual",
     });
 
     if (sale) {

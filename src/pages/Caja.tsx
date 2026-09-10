@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Wallet, TrendingUp, ShoppingCart, PlusCircle, DollarSign, Lock, Unlock } from "lucide-react";
+import { Wallet, TrendingUp, ShoppingCart, PlusCircle, DollarSign, Lock, Unlock, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getSalesByMerchant, getMenuItems, getOpenRegister, openRegister, closeRegister, getOrdersByMerchant } from "@/services/supabase";
+import { getSalesByMerchant, getMenuItems, getOpenRegister, openRegister, closeRegister, getOrdersByMerchant, deleteSale } from "@/services/supabase";
 import type { Sale, MenuItem, DailyRegister, Order } from "@/types";
 import { toast } from "sonner";
 
@@ -22,6 +22,17 @@ export default function CajaPage() {
   const [loading, setLoading] = useState(true);
   const [openDialogOpen, setOpenDialogOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+
+  const paymentLabels: Record<string, string> = {
+    efectivo: "Efectivo",
+    debito: "Débito",
+    credito: "Crédito",
+    transferencia: "Transferencia",
+    qr: "QR",
+    delivery: "Delivery",
+    manual: "Manual",
+    order: "Pedido",
+  };
 
   // Open/Close form
   const [openingAmount, setOpeningAmount] = useState("");
@@ -69,6 +80,15 @@ export default function CajaPage() {
       setCloseDialogOpen(false);
       setClosingAmount("");
       toast.success("Caja cerrada");
+      loadData();
+    }
+  }
+
+  async function handleDeleteSale(saleId: string) {
+    if (!confirm("¿Eliminar esta venta?")) return;
+    const ok = await deleteSale(saleId);
+    if (ok) {
+      toast.success("Venta eliminada");
       loadData();
     }
   }
@@ -269,18 +289,34 @@ export default function CajaPage() {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-foreground">{sale.description}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(sale.createdAt).toLocaleString("es-AR")}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(sale.createdAt).toLocaleString("es-AR")}
+                          </p>
+                          {sale.paymentMethod && sale.paymentMethod !== "manual" && sale.paymentMethod !== "order" && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              {paymentLabels[sale.paymentMethod] || sale.paymentMethod}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-foreground">
-                        ${sale.amount.toLocaleString("es-AR")}
-                      </p>
-                      <Badge variant="outline" className="text-[10px]">
-                        {sale.type === "order" ? "Pedido" : "Manual"}
-                      </Badge>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-foreground">
+                          ${sale.amount.toLocaleString("es-AR")}
+                        </p>
+                        <Badge variant="outline" className="text-[10px]">
+                          {sale.type === "order" ? "Pedido" : "Manual"}
+                        </Badge>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSale(sale.id)}
+                        className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </CardContent>
                 </Card>

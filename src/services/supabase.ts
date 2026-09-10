@@ -727,6 +727,7 @@ export async function getSalesByMerchant(merchantId: string): Promise<Sale[]> {
     amount: s.amount,
     description: s.description || "",
     type: s.type,
+    paymentMethod: s.payment_method || "",
     createdAt: new Date(s.created_at),
   }));
 }
@@ -737,6 +738,7 @@ export async function createSale(sale: {
   amount: number;
   description: string;
   type: "order" | "manual";
+  paymentMethod?: string;
 }): Promise<Sale | null> {
   if (!isSupabaseConfigured() || !supabase) return null;
 
@@ -748,6 +750,7 @@ export async function createSale(sale: {
       amount: sale.amount,
       description: sale.description,
       type: sale.type,
+      payment_method: sale.paymentMethod || "manual",
     })
     .select()
     .single();
@@ -764,8 +767,24 @@ export async function createSale(sale: {
     amount: data.amount,
     description: data.description || "",
     type: data.type,
+    paymentMethod: data.payment_method || "",
     createdAt: new Date(data.created_at),
   };
+}
+
+export async function deleteSale(saleId: string): Promise<boolean> {
+  if (!isSupabaseConfigured() || !supabase) return false;
+
+  const { error } = await supabase
+    .from("sales")
+    .delete()
+    .eq("id", saleId);
+
+  if (error) {
+    console.error("Error deleting sale:", error);
+    return false;
+  }
+  return true;
 }
 
 // ========== DAILY REGISTERS ==========
