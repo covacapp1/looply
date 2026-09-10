@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Search, ShoppingCart, DollarSign, CreditCard, Smartphone, Truck, QrCode, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,7 +38,6 @@ export default function CargarVentaPage() {
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [variantPrices, setVariantPrices] = useState<Record<string, number>>({});
   const [qty, setQty] = useState("1");
-  const [customAmount, setCustomAmount] = useState("");
   const [customDesc, setCustomDesc] = useState("");
 
   // Payment
@@ -69,22 +67,13 @@ export default function CargarVentaPage() {
     setSelectedVariants({});
     setVariantPrices({});
     setQty("1");
-    if (productId === "custom") {
-      setCustomAmount("");
-      setCustomDesc("");
-    } else {
-      const item = menuItems.find((m) => m.id === productId);
-      if (item) {
-        setCustomAmount(item.price.toString());
-        setCustomDesc(item.name);
-      }
+    const item = menuItems.find((m) => m.id === productId);
+    if (item) {
+      setCustomDesc(item.name);
     }
   }
 
   function getTotal(): number {
-    if (selectedProduct === "custom") {
-      return parseFloat(customAmount) || 0;
-    }
     const item = menuItems.find((m) => m.id === selectedProduct);
     if (!item) return 0;
     const variantTotal = Object.values(variantPrices).reduce((sum, p) => sum + p, 0);
@@ -98,9 +87,7 @@ export default function CargarVentaPage() {
     if (total <= 0) return;
     setSaving(true);
 
-    const desc = selectedProduct === "custom"
-      ? (customDesc.trim() || "Venta manual")
-      : `${customDesc} x${qty}${Object.keys(selectedVariants).length > 0 ? " (" + Object.values(selectedVariants).join(", ") + ")" : ""}`;
+    const desc = `${customDesc} x${qty}${Object.keys(selectedVariants).length > 0 ? " (" + Object.values(selectedVariants).join(", ") + ")" : ""}`;
 
     const sale = await createSale({
       merchantId: user.id,
@@ -115,7 +102,6 @@ export default function CargarVentaPage() {
       setSelectedVariants({});
       setVariantPrices({});
       setQty("1");
-      setCustomAmount("");
       setCustomDesc("");
       setPaymentMethod("");
       setSearch("");
@@ -189,17 +175,6 @@ export default function CargarVentaPage() {
               </p>
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => handleProductSelect("custom")}
-            className={`p-3 rounded-xl border text-left transition-all ${
-              selectedProduct === "custom"
-                ? "border-primary bg-primary/5 ring-2 ring-primary shadow-sm"
-                : "border-border hover:border-primary/30 border-dashed"
-            }`}
-          >
-            <p className="text-sm font-medium text-muted-foreground">Otro / Personalizado</p>
-          </button>
         </div>
       )}
 
@@ -211,7 +186,7 @@ export default function CargarVentaPage() {
           className="space-y-4"
         >
           {/* Variants */}
-          {selectedProduct !== "custom" && (() => {
+          {(() => {
             const item = menuItems.find((m) => m.id === selectedProduct);
             if (!item || !item.variants || item.variants.length === 0) return null;
             return (
@@ -255,44 +230,16 @@ export default function CargarVentaPage() {
           })()}
 
           {/* Quantity */}
-          {selectedProduct !== "custom" && (
-            <div className="space-y-2">
-              <Label>Cantidad</Label>
-              <Input
-                type="number"
-                min="1"
-                value={qty}
-                onChange={(e) => setQty(e.target.value)}
-                className="w-24"
-              />
-            </div>
-          )}
-
-          {/* Custom fields */}
-          {selectedProduct === "custom" && (
-            <>
-              <div className="space-y-2">
-                <Label>Descripción</Label>
-                <Textarea
-                  placeholder="Ej: Venta en efectivo, propina, etc."
-                  value={customDesc}
-                  onChange={(e) => setCustomDesc(e.target.value)}
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Monto ($)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={customAmount}
-                  onChange={(e) => setCustomAmount(e.target.value)}
-                />
-              </div>
-            </>
-          )}
+          <div className="space-y-2">
+            <Label>Cantidad</Label>
+            <Input
+              type="number"
+              min="1"
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              className="w-24"
+            />
+          </div>
 
           {/* Payment Method */}
           <div className="space-y-2">
