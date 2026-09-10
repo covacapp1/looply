@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import type { LoyaltyReward, Customer, StampHistory, MenuItem, ShopCustomer, Order, Sale, DailyRegister, CuentaCorriente, ProductVariant, Locale } from "@/types";
+import type { LoyaltyReward, Customer, StampHistory, MenuItem, ShopCustomer, Order, Sale, DailyRegister, CuentaCorriente, ProductVariant, Locale, Recipe } from "@/types";
 
 function migrateVariants(variants: any[]): ProductVariant[] {
   return (variants || []).map((v: any) => ({
@@ -1161,5 +1161,43 @@ export async function deleteCuentaCorriente(id: string): Promise<boolean> {
     .delete()
     .eq("id", id);
 
+  return !error;
+}
+
+// ========== RECIPES ==========
+export async function getRecipes(merchantId: string): Promise<Recipe[]> {
+  if (!isSupabaseConfigured() || !supabase) return [];
+  const { data, error } = await supabase
+    .from("recipes")
+    .select("*")
+    .eq("merchant_id", merchantId)
+    .order("created_at", { ascending: false });
+  if (error) return [];
+  return data.map((r) => ({ id: r.id, merchantId: r.merchant_id, title: r.title, content: r.content || "", createdAt: new Date(r.created_at) }));
+}
+
+export async function createRecipe(merchantId: string, title: string, content: string): Promise<Recipe | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+  const { data, error } = await supabase
+    .from("recipes")
+    .insert({ merchant_id: merchantId, title, content })
+    .select()
+    .single();
+  if (error || !data) return null;
+  return { id: data.id, merchantId: data.merchant_id, title: data.title, content: data.content || "", createdAt: new Date(data.created_at) };
+}
+
+export async function updateRecipe(id: string, title: string, content: string): Promise<boolean> {
+  if (!isSupabaseConfigured() || !supabase) return false;
+  const { error } = await supabase
+    .from("recipes")
+    .update({ title, content })
+    .eq("id", id);
+  return !error;
+}
+
+export async function deleteRecipe(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured() || !supabase) return false;
+  const { error } = await supabase.from("recipes").delete().eq("id", id);
   return !error;
 }

@@ -12,6 +12,7 @@ import {
   Zap,
   Users,
   MapPin,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,6 +28,7 @@ const adminMenuItems = [
   { label: "Reportes", href: "/statistics", icon: BarChart3, color: "text-lime-500" },
   { label: "Cajeros", href: "/cajeros", icon: Users, color: "text-indigo-500" },
   { label: "Locales", href: "/locales", icon: MapPin, color: "text-cyan-500" },
+  { label: "Recetas", href: "/recetas", icon: BookOpen, color: "text-amber-500" },
   { label: "Configuración", href: "/settings", icon: Settings, color: "text-gray-500" },
 ];
 

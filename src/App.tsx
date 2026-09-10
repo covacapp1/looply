@@ -22,6 +22,7 @@ import CuentaCorrientePage from "@/pages/CuentaCorriente";
 import CargarVentaPage from "@/pages/CargarVenta";
 import CajerosPage from "@/pages/Cajeros";
 import LocalesPage from "@/pages/Locales";
+import RecetasPage from "@/pages/Recetas";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -121,6 +122,7 @@ export default function App() {
                 <AdminRoute><CajerosPage /></AdminRoute>
               } />
               <Route path="/locales" element={<LocalesPage />} />
+              <Route path="/recetas" element={<RecetasPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route
                 path="/admin"

@@ -18,6 +18,7 @@ const adminNavItems = [
   { label: "Reportes", href: "/statistics" },
   { label: "Cajeros", href: "/cajeros" },
   { label: "Locales", href: "/locales" },
+  { label: "Recetas", href: "/recetas" },
   { label: "Configuración", href: "/settings" },
 ];
 

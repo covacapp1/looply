@@ -179,6 +179,14 @@ export interface CuentaCorriente {
 
 export type ViewMode = "grid" | "list";
 
+export interface Recipe {
+  id: string;
+  merchantId: string;
+  title: string;
+  content: string;
+  createdAt: Date;
+}
+
 export interface FilterOptions {
   search: string;
   status: "all" | "active" | "inactive";
