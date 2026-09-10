@@ -5,13 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Wallet, TrendingUp, ShoppingCart, PlusCircle, DollarSign, Lock, Unlock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getSalesByMerchant, createSale, getMenuItems, getOpenRegister, openRegister, closeRegister, getOrdersByMerchant } from "@/services/supabase";
-import type { Sale, MenuItem, DailyRegister, ProductVariant, Order } from "@/types";
+import { getSalesByMerchant, getMenuItems, getOpenRegister, openRegister, closeRegister, getOrdersByMerchant } from "@/services/supabase";
+import type { Sale, MenuItem, DailyRegister, Order } from "@/types";
 import { toast } from "sonner";
 
 export default function CajaPage() {
@@ -21,24 +20,12 @@ export default function CajaPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [register, setRegister] = useState<DailyRegister | null>(null);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [openDialogOpen, setOpenDialogOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
-
-  // Manual sale form
-  const [selectedProduct, setSelectedProduct] = useState<string>("");
-  const [manualQty, setManualQty] = useState("1");
-  const [manualAmount, setManualAmount] = useState("");
-  const [manualDesc, setManualDesc] = useState("");
-  const [saving, setSaving] = useState(false);
 
   // Open/Close form
   const [openingAmount, setOpeningAmount] = useState("");
   const [closingAmount, setClosingAmount] = useState("");
-
-  // Variant selection
-  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
-  const [variantPrices, setVariantPrices] = useState<Record<string, number>>({});
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -84,62 +71,6 @@ export default function CajaPage() {
       toast.success("Caja cerrada");
       loadData();
     }
-  }
-
-  function handleProductSelect(productId: string) {
-    setSelectedProduct(productId);
-    setSelectedVariants({});
-    setVariantPrices({});
-    if (productId === "custom") {
-      setManualAmount("");
-      setManualDesc("");
-      setManualQty("1");
-    } else {
-      const item = menuItems.find((m) => m.id === productId);
-      if (item) {
-        setManualAmount(item.price.toString());
-        setManualDesc(item.name);
-        setManualQty("1");
-      }
-    }
-  }
-
-  function updateTotal() {
-    if (selectedProduct && selectedProduct !== "custom") {
-      const item = menuItems.find((m) => m.id === selectedProduct);
-      if (item) {
-        const qty = parseInt(manualQty) || 1;
-        const variantTotal = Object.values(variantPrices).reduce((sum, p) => sum + p, 0);
-        setManualAmount(((item.price + variantTotal) * qty).toString());
-      }
-    }
-  }
-
-  useEffect(() => {
-    updateTotal();
-  }, [manualQty, selectedProduct, variantPrices]);
-
-  async function handleManualSale() {
-    if (!user || !manualAmount || parseFloat(manualAmount) <= 0 || !register) return;
-    setSaving(true);
-
-    const sale = await createSale({
-      merchantId: user.id,
-      amount: parseFloat(manualAmount),
-      description: manualDesc.trim() || "Venta manual",
-      type: "manual",
-    });
-
-    if (sale) {
-      setSales((prev) => [sale, ...prev]);
-      setSelectedProduct("");
-      setManualAmount("");
-      setManualDesc("");
-      setManualQty("1");
-      setDialogOpen(false);
-      toast.success("Venta registrada");
-    }
-    setSaving(false);
   }
 
   // Calculate stats
@@ -197,156 +128,6 @@ export default function CajaPage() {
               </Button>
             ) : (
               <>
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" disabled={!register}>
-                      <PlusCircle className="h-4 w-4 mr-2" />
-                      Carga
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Cargar Venta</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 mt-4">
-                      <div className="space-y-2">
-                        <Label>Producto</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {menuItems.map((item) => (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => handleProductSelect(item.id)}
-                              className={`p-3 rounded-lg border text-left transition-all ${
-                                selectedProduct === item.id
-                                  ? "border-primary bg-primary/5 ring-1 ring-primary"
-                                  : "border-border hover:border-primary/30"
-                              }`}
-                            >
-                              {item.imageUrl && (
-                                <img src={item.imageUrl} alt={item.name} className="h-12 w-12 rounded object-cover mb-1" />
-                              )}
-                              <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
-                              <p className="text-xs text-primary font-bold">${item.price.toLocaleString("es-AR")}</p>
-                            </button>
-                          ))}
-                          <button
-                            type="button"
-                            onClick={() => handleProductSelect("custom")}
-                            className={`p-3 rounded-lg border text-left transition-all ${
-                              selectedProduct === "custom"
-                                ? "border-primary bg-primary/5 ring-1 ring-primary"
-                                : "border-border hover:border-primary/30 border-dashed"
-                            }`}
-                          >
-                            <p className="text-sm font-medium text-muted-foreground">Otro / Personalizado</p>
-                          </button>
-                        </div>
-                      </div>
-
-                      {selectedProduct && selectedProduct !== "custom" && (
-                        <>
-                          {/* Variant selectors */}
-                          {(() => {
-                            const item = menuItems.find((m) => m.id === selectedProduct);
-                            if (!item || !item.variants || item.variants.length === 0) return null;
-                            return (
-                                <div className="space-y-3">
-                                  {item.variants.map((variant: ProductVariant) => (
-                                    <div key={variant.name}>
-                                      <Label className="text-xs text-muted-foreground mb-1.5">{variant.name}</Label>
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {variant.options.map((option) => {
-                                          const isSelected = selectedVariants[variant.name] === option.name;
-                                          const priceLabel = option.price > 0 ? ` +$${option.price.toLocaleString("es-AR")}` : "";
-                                          return (
-                                            <button
-                                              key={option.name}
-                                              type="button"
-                                              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                                                isSelected
-                                                  ? "bg-primary text-primary-foreground"
-                                                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                              }`}
-                                              onClick={() => {
-                                                setSelectedVariants((prev) => ({
-                                                  ...prev,
-                                                  [variant.name]: option.name,
-                                                }));
-                                                setVariantPrices((prev) => ({
-                                                  ...prev,
-                                                  [variant.name]: option.price,
-                                                }));
-                                              }}
-                                            >
-                                              {option.name}{priceLabel}
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                            );
-                          })()}
-
-                          <div className="space-y-2">
-                            <Label>Cantidad</Label>
-                            <Input
-                              type="number"
-                              min="1"
-                              value={manualQty}
-                              onChange={(e) => setManualQty(e.target.value)}
-                            />
-                          </div>
-                        </>
-                      )}
-
-                      {selectedProduct === "custom" && (
-                        <>
-                          <div className="space-y-2">
-                            <Label>Descripción</Label>
-                            <Textarea
-                              placeholder="Ej: Venta en efectivo, propina, etc."
-                              value={manualDesc}
-                              onChange={(e) => setManualDesc(e.target.value)}
-                              rows={2}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Monto ($)</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              placeholder="0.00"
-                              value={manualAmount}
-                              onChange={(e) => setManualAmount(e.target.value)}
-                            />
-                          </div>
-                        </>
-                      )}
-
-                      {selectedProduct && selectedProduct !== "custom" && (
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
-                          <span className="text-sm text-muted-foreground">Total</span>
-                          <span className="text-lg font-bold text-foreground">
-                            ${parseFloat(manualAmount || "0").toLocaleString("es-AR")}
-                          </span>
-                        </div>
-                      )}
-
-                      <Button
-                        className="w-full"
-                        onClick={handleManualSale}
-                        disabled={saving || !manualAmount || parseFloat(manualAmount) <= 0 || !selectedProduct}
-                      >
-                        {saving ? "Guardando..." : "Registrar Venta"}
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
                 <Button size="sm" variant="destructive" onClick={() => setCloseDialogOpen(true)}>
                   <Lock className="h-4 w-4 mr-2" />
                   Cerrar Caja
@@ -455,9 +236,9 @@ export default function CajaPage() {
           </div>
           <h3 className="text-lg font-semibold text-foreground mb-2">Sin ventas esta sesión</h3>
           <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
-            Registrá ventas desde el botón "Carga" o los pedidos del link se registran automáticamente
+            Registrá ventas desde "Cargar Venta" en el menú principal, o los pedidos del link se registran automáticamente
           </p>
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button onClick={() => window.location.href = "/cargar-venta"}>
             <PlusCircle className="h-4 w-4 mr-2" />
             Cargar Venta
           </Button>

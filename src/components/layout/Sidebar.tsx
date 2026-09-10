@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { label: "Menú", href: "/" },
+  { label: "Cargar Venta", href: "/cargar-venta" },
   { label: "Caja", href: "/caja" },
   { label: "Pedidos", href: "/orders" },
   { label: "Cuenta Corriente", href: "/cuenta-corriente" },

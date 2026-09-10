@@ -9,10 +9,12 @@ import {
   ShoppingBag,
   Wallet,
   Receipt,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
+  { label: "Cargar Venta", href: "/cargar-venta", icon: Zap, color: "text-emerald-500" },
   { label: "Caja", href: "/caja", icon: Wallet, color: "text-amber-500" },
   { label: "Pedidos", href: "/orders", icon: ShoppingBag, color: "text-violet-500" },
   { label: "Cuenta Corriente", href: "/cuenta-corriente", icon: Receipt, color: "text-rose-500" },
