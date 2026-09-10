@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Users, Plus, Trash2, Loader2, UserPlus, Shield } from "lucide-react";
+import { Users, Plus, Trash2, Loader2, UserPlus, Search, UserCheck, UserX } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -16,22 +16,24 @@ interface Cajero {
   email: string;
   full_name: string;
   role: string;
+  is_active: boolean;
   created_at: string;
 }
 
 export default function CajerosPage() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const [cajeros, setCajeros] = useState<Cajero[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState({ username: "", password: "" });
 
   const loadCajeros = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
       .from("app_users")
-      .select("id, email, full_name, role, created_at")
+      .select("id, email, full_name, role, is_active, created_at")
       .eq("role", "cajero")
       .order("created_at", { ascending: false });
     if (data) setCajeros(data);
@@ -39,6 +41,11 @@ export default function CajerosPage() {
   }, [user]);
 
   useEffect(() => { loadCajeros(); }, [loadCajeros]);
+
+  const filteredCajeros = cajeros.filter((c) =>
+    c.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+    c.email?.toLowerCase().includes(search.toLowerCase())
+  );
 
   async function handleCreate() {
     if (!form.username.trim() || !form.password.trim()) return;
@@ -80,74 +87,107 @@ export default function CajerosPage() {
     setCreating(false);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("¿Eliminar este cajero?")) return;
-    await supabase.from("app_users").delete().eq("id", id);
-    toast.success("Cajero eliminado");
+  async function handleToggleActive(id: string, currentActive: boolean) {
+    await supabase.from("app_users").update({ is_active: !currentActive }).eq("id", id);
+    toast.success(currentActive ? "Cajero desactivado" : "Cajero activado");
     loadCajeros();
   }
 
-  if (profile?.role !== "admin") {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <p className="text-muted-foreground">Solo el administrador puede gestionar cajeros</p>
-      </div>
-    );
+  async function handleDelete(id: string) {
+    if (!confirm("¿Eliminar este cajero permanentemente?")) return;
+    await supabase.from("app_users").delete().eq("id", id);
+    toast.success("Cajero eliminado");
+    loadCajeros();
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Cajeros"
-        subtitle="Gestioná las cuentas de tus empleados"
+        subtitle={`${cajeros.length} cajero${cajeros.length !== 1 ? "s" : ""} configurado${cajeros.length !== 1 ? "s" : ""}`}
         actions={
-          <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Cajero
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => window.history.back()}>
+              ← Volver
+            </Button>
+            <Button size="sm" onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Cargar cajero
+            </Button>
+          </div>
         }
       />
 
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar cajero..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {/* Cajeros List */}
       {loading ? (
         <div className="flex justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      ) : cajeros.length === 0 ? (
+      ) : filteredCajeros.length === 0 ? (
         <Card className="border-border">
           <CardContent className="p-8 text-center">
             <div className="rounded-full bg-muted p-4 mx-auto mb-4 w-fit">
               <Users className="h-8 w-8 text-muted-foreground" />
             </div>
-            <p className="text-muted-foreground mb-1">No hay cajeros creados</p>
-            <p className="text-xs text-muted-foreground">Creá una cuenta para que tu empleado pueda cargar ventas</p>
+            <p className="text-muted-foreground mb-1">
+              {search ? "No se encontraron cajeros" : "No hay cajeros creados"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {search ? "Probá con otro nombre" : "Creá una cuenta para que tu empleado pueda cargar ventas"}
+            </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {cajeros.map((cajero) => (
-            <Card key={cajero.id} className="border-border">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Shield className="h-5 w-5 text-primary" />
-                  </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {filteredCajeros.map((cajero) => (
+            <Card key={cajero.id} className="border-border overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-3">
                   <div>
-                    <p className="font-medium text-foreground">{cajero.full_name}</p>
-                    <p className="text-xs text-muted-foreground">{cajero.email}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Creado: {new Date(cajero.created_at).toLocaleDateString("es-AR")}
-                    </p>
+                    <p className="font-semibold text-foreground text-lg">{cajero.full_name}</p>
+                    <p className="text-sm text-muted-foreground">@{cajero.full_name?.toLowerCase().replace(/\s+/g, "")}</p>
                   </div>
+                  <Badge
+                    variant={cajero.is_active !== false ? "default" : "secondary"}
+                    className={cajero.is_active !== false
+                      ? "bg-emerald-500 text-white"
+                      : "bg-muted text-muted-foreground"
+                    }
+                  >
+                    {cajero.is_active !== false ? "Activo" : "Inactivo"}
+                  </Badge>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-primary/10 text-primary border-primary/20">Cajero</Badge>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleToggleActive(cajero.id, cajero.is_active !== false)}
+                  >
+                    {cajero.is_active !== false ? (
+                      <><UserX className="h-4 w-4 mr-1" /> Desactivar</>
+                    ) : (
+                      <><UserCheck className="h-4 w-4 mr-1" /> Activar</>
+                    )}
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleDelete(cajero.id)}
-                    className="text-red-500 hover:text-red-600"
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 mr-1" /> Eliminar
                   </Button>
                 </div>
               </CardContent>
@@ -156,6 +196,7 @@ export default function CajerosPage() {
         </div>
       )}
 
+      {/* Create Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent>
           <DialogHeader>
@@ -172,7 +213,6 @@ export default function CajerosPage() {
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
               />
-              <p className="text-xs text-muted-foreground">Se usará para crear el login del cajero</p>
             </div>
             <div className="space-y-2">
               <Label>Contraseña</Label>

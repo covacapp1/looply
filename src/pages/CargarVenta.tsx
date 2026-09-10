@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Search, ShoppingCart, DollarSign, CreditCard, Smartphone, Truck, QrCode, ArrowLeft } from "lucide-react";
+import { Search, ShoppingCart, DollarSign, CreditCard, Smartphone, Truck, QrCode, ArrowLeft, Plus, Minus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getMenuItems, createSale, getOpenRegister } from "@/services/supabase";
 import type { MenuItem, ProductVariant } from "@/types";
@@ -35,8 +35,8 @@ export default function CargarVentaPage() {
 
   // Selection
   const [selectedProduct, setSelectedProduct] = useState<string>("");
-  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
-  const [variantPrices, setVariantPrices] = useState<Record<string, number>>({});
+  // Multi-select variants: { variantName: { optionName: quantity } }
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, Record<string, number>>>({});
   const [qty, setQty] = useState("1");
   const [customDesc, setCustomDesc] = useState("");
 
@@ -65,7 +65,6 @@ export default function CargarVentaPage() {
   function handleProductSelect(productId: string) {
     setSelectedProduct(productId);
     setSelectedVariants({});
-    setVariantPrices({});
     setQty("1");
     const item = menuItems.find((m) => m.id === productId);
     if (item) {
@@ -73,12 +72,71 @@ export default function CargarVentaPage() {
     }
   }
 
+  function toggleVariantOption(variantName: string, optionName: string) {
+    setSelectedVariants((prev) => {
+      const group = prev[variantName] || {};
+      const currentQty = group[optionName] || 0;
+      const newGroup = { ...group };
+      if (currentQty > 0) {
+        delete newGroup[optionName];
+      } else {
+        newGroup[optionName] = 1;
+      }
+      const next = { ...prev };
+      if (Object.keys(newGroup).length === 0) {
+        delete next[variantName];
+      } else {
+        next[variantName] = newGroup;
+      }
+      return next;
+    });
+  }
+
+  function setVariantOptionQty(variantName: string, optionName: string, newQty: number) {
+    setSelectedVariants((prev) => {
+      const group = prev[variantName] || {};
+      const newGroup = { ...group };
+      if (newQty <= 0) {
+        delete newGroup[optionName];
+      } else {
+        newGroup[optionName] = newQty;
+      }
+      const next = { ...prev };
+      if (Object.keys(newGroup).length === 0) {
+        delete next[variantName];
+      } else {
+        next[variantName] = newGroup;
+      }
+      return next;
+    });
+  }
+
   function getTotal(): number {
     const item = menuItems.find((m) => m.id === selectedProduct);
     if (!item) return 0;
-    const variantTotal = Object.values(variantPrices).reduce((sum, p) => sum + p, 0);
+    let variantTotal = 0;
+    for (const [variantName, options] of Object.entries(selectedVariants)) {
+      const variant = item.variants?.find((v) => v.name === variantName);
+      if (!variant) continue;
+      for (const [optionName, optQty] of Object.entries(options)) {
+        const option = variant.options.find((o) => o.name === optionName);
+        if (option) {
+          variantTotal += option.price * optQty;
+        }
+      }
+    }
     const quantity = parseInt(qty) || 1;
     return (item.price + variantTotal) * quantity;
+  }
+
+  function getSelectedVariantSummary(): string {
+    const parts: string[] = [];
+    for (const [variantName, options] of Object.entries(selectedVariants)) {
+      for (const [optionName, optQty] of Object.entries(options)) {
+        parts.push(`${optionName}${optQty > 1 ? ` x${optQty}` : ""}`);
+      }
+    }
+    return parts.join(", ");
   }
 
   async function handleSave() {
@@ -87,7 +145,8 @@ export default function CargarVentaPage() {
     if (total <= 0) return;
     setSaving(true);
 
-    const desc = `${customDesc} x${qty}${Object.keys(selectedVariants).length > 0 ? " (" + Object.values(selectedVariants).join(", ") + ")" : ""}`;
+    const variantSummary = getSelectedVariantSummary();
+    const desc = `${customDesc} x${qty}${variantSummary ? ` (${variantSummary})` : ""}`;
 
     const sale = await createSale({
       merchantId: user.id,
@@ -100,7 +159,6 @@ export default function CargarVentaPage() {
       toast.success("Venta registrada");
       setSelectedProduct("");
       setSelectedVariants({});
-      setVariantPrices({});
       setQty("1");
       setCustomDesc("");
       setPaymentMethod("");
@@ -185,46 +243,71 @@ export default function CargarVentaPage() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-4"
         >
-          {/* Variants */}
+          {/* Multi-select variants */}
           {(() => {
             const item = menuItems.find((m) => m.id === selectedProduct);
             if (!item || !item.variants || item.variants.length === 0) return null;
             return (
               <div className="space-y-3">
-                {item.variants.map((variant: ProductVariant) => (
-                  <div key={variant.name}>
-                    <Label className="text-xs text-muted-foreground mb-1.5">{variant.name}</Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {variant.options.map((option) => {
-                        const isSelected = selectedVariants[variant.name] === option.name;
-                        const priceLabel = option.price > 0 ? ` +$${option.price.toLocaleString("es-AR")}` : "";
-                        return (
-                          <button
-                            key={option.name}
-                            type="button"
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                              isSelected
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted text-muted-foreground hover:bg-muted/80"
-                            }`}
-                            onClick={() => {
-                              setSelectedVariants((prev) => ({
-                                ...prev,
-                                [variant.name]: option.name,
-                              }));
-                              setVariantPrices((prev) => ({
-                                ...prev,
-                                [variant.name]: option.price,
-                              }));
-                            }}
-                          >
-                            {option.name}{priceLabel}
-                          </button>
-                        );
-                      })}
+                {item.variants.map((variant: ProductVariant) => {
+                  const selectedGroup = selectedVariants[variant.name] || {};
+                  return (
+                    <div key={variant.name}>
+                      <Label className="text-xs text-muted-foreground mb-1.5">{variant.name}</Label>
+                      <div className="space-y-1.5">
+                        {variant.options.map((option) => {
+                          const optQty = selectedGroup[option.name] || 0;
+                          const isSelected = optQty > 0;
+                          const priceLabel = option.price > 0 ? ` +$${option.price.toLocaleString("es-AR")}` : "";
+                          return (
+                            <div
+                              key={option.name}
+                              className={`flex items-center justify-between rounded-xl px-3 py-2 transition-colors ${
+                                isSelected
+                                  ? "bg-primary/10 border border-primary/30"
+                                  : "bg-muted/50 border border-transparent"
+                              }`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-foreground truncate">{option.name}</p>
+                                {option.price > 0 && (
+                                  <p className="text-xs text-primary font-medium">{priceLabel}</p>
+                                )}
+                              </div>
+                              {!isSelected ? (
+                                <button
+                                  type="button"
+                                  className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0"
+                                  onClick={() => toggleVariantOption(variant.name, option.name)}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </button>
+                              ) : (
+                                <div className="flex items-center gap-1 bg-primary rounded-full flex-shrink-0">
+                                  <button
+                                    type="button"
+                                    className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-primary/80 text-primary-foreground"
+                                    onClick={() => setVariantOptionQty(variant.name, option.name, optQty - 1)}
+                                  >
+                                    <Minus className="h-4 w-4" />
+                                  </button>
+                                  <span className="w-6 text-center text-sm font-bold text-primary-foreground">{optQty}</span>
+                                  <button
+                                    type="button"
+                                    className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-primary/80 text-primary-foreground"
+                                    onClick={() => setVariantOptionQty(variant.name, option.name, optQty + 1)}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             );
           })()}
