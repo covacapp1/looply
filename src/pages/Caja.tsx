@@ -163,77 +163,81 @@ export default function CajaPage() {
         }
       />
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <Card className="border-border">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total</p>
-                <p className="text-lg font-bold text-foreground">${totalVentas.toLocaleString("es-AR")}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center">
-                <ShoppingCart className="h-5 w-5 text-violet-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Pedidos</p>
-                <p className="text-lg font-bold text-foreground">{pedidosCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                <Wallet className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Ventas</p>
-                <p className="text-lg font-bold text-foreground">{ventasCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-rose-100 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-rose-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Beneficio</p>
-                <p className="text-lg font-bold text-foreground">${beneficio.toLocaleString("es-AR")}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Cost detail */}
-      <Card className="border-border mb-6">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Costo</span>
-              <span className="text-sm font-bold text-foreground">${totalCost.toLocaleString("es-AR")}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Efectivo</span>
-              <span className="text-sm font-bold text-foreground">${totalVentas.toLocaleString("es-AR")}</span>
-            </div>
+      {/* Stats - only when caja is open */}
+      {register && (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <Card className="border-border">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <DollarSign className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total</p>
+                    <p className="text-lg font-bold text-foreground">${totalVentas.toLocaleString("es-AR")}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-border">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center">
+                    <ShoppingCart className="h-5 w-5 text-violet-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Pedidos</p>
+                    <p className="text-lg font-bold text-foreground">{pedidosCount}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-border">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                    <Wallet className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Ventas</p>
+                    <p className="text-lg font-bold text-foreground">{ventasCount}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-border">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-rose-100 flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 text-rose-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Beneficio</p>
+                    <p className="text-lg font-bold text-foreground">${beneficio.toLocaleString("es-AR")}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Cost detail */}
+          <Card className="border-border mb-6">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Costo</span>
+                  <span className="text-sm font-bold text-foreground">${totalCost.toLocaleString("es-AR")}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Efectivo</span>
+                  <span className="text-sm font-bold text-foreground">${totalVentas.toLocaleString("es-AR")}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       {/* Sales List */}
       {loading ? (
