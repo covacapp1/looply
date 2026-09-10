@@ -300,10 +300,10 @@ export default function StatisticsPage() {
 
       {activeTab === "depositos" && (
         <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Depósitos</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Locales</h2>
           <Card className="border-border"><CardContent className="p-6 text-center text-muted-foreground">
             <Warehouse className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>Próximamente: gestión de depósitos</p>
+            <p>Próximamente: gestión de locales</p>
           </CardContent></Card>
         </div>
       )}
