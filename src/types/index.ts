@@ -145,6 +145,13 @@ export interface Sale {
   createdAt: Date;
 }
 
+export interface Locale {
+  id: string;
+  merchantId: string;
+  name: string;
+  createdAt: Date;
+}
+
 export interface DailyRegister {
   id: string;
   merchantId: string;
@@ -153,6 +160,7 @@ export interface DailyRegister {
   status: "open" | "closed";
   openedAt: Date;
   closedAt: Date | null;
+  localId?: string | null;
 }
 
 export interface CuentaCorriente {

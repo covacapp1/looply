@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Wallet, TrendingUp, ShoppingCart, PlusCircle, DollarSign, Lock, Unlock, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getSalesByMerchant, getMenuItems, getOpenRegister, openRegister, closeRegister, getOrdersByMerchant, deleteSale } from "@/services/supabase";
-import type { Sale, MenuItem, DailyRegister, Order } from "@/types";
+import { getSalesByMerchant, getMenuItems, getOpenRegister, openRegister, closeRegister, getOrdersByMerchant, deleteSale, getLocales } from "@/services/supabase";
+import type { Sale, MenuItem, DailyRegister, Order, Locale } from "@/types";
 import { toast } from "sonner";
 
 export default function CajaPage() {
@@ -19,9 +19,11 @@ export default function CajaPage() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [register, setRegister] = useState<DailyRegister | null>(null);
+  const [locales, setLocales] = useState<Locale[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialogOpen, setOpenDialogOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [selectedLocal, setSelectedLocal] = useState("");
 
   const paymentLabels: Record<string, string> = {
     efectivo: "Efectivo",
@@ -40,16 +42,18 @@ export default function CajaPage() {
 
   const loadData = useCallback(async () => {
     if (!user) return;
-    const [salesData, menuData, reg, ordersData] = await Promise.all([
+    const [salesData, menuData, reg, ordersData, localesData] = await Promise.all([
       getSalesByMerchant(user.id),
       getMenuItems(user.id),
       getOpenRegister(user.id),
       getOrdersByMerchant(user.id),
+      getLocales(user.id),
     ]);
     setSales(salesData);
     setMenuItems(menuData);
     setRegister(reg);
     setOrders(ordersData);
+    setLocales(localesData);
     setLoading(false);
   }, [user]);
 
@@ -59,11 +63,12 @@ export default function CajaPage() {
 
   async function handleOpenRegister() {
     if (!user || !openingAmount) return;
-    const reg = await openRegister(user.id, parseFloat(openingAmount));
+    const reg = await openRegister(user.id, parseFloat(openingAmount), selectedLocal || null);
     if (reg) {
       setRegister(reg);
       setOpenDialogOpen(false);
       setOpeningAmount("");
+      setSelectedLocal("");
       toast.success("Caja abierta");
     }
   }
@@ -138,7 +143,7 @@ export default function CajaPage() {
     <div>
       <PageHeader
         title="Caja"
-        description={register ? `Abierta - Monto inicial: $${register.openingAmount.toLocaleString("es-AR")}` : "Caja cerrada"}
+        description={register ? `Abierta - Monto inicial: $${register.openingAmount.toLocaleString("es-AR")}${register.localId ? ` — ${locales.find((l) => l.id === register.localId)?.name || ""}` : ""}` : "Caja cerrada"}
         actions={
           <div className="flex gap-2">
             {!register ? (
@@ -333,6 +338,27 @@ export default function CajaPage() {
             <DialogTitle>Abrir Caja</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
+            {locales.length > 0 && (
+              <div className="space-y-2">
+                <Label>Local</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {locales.map((locale) => (
+                    <button
+                      key={locale.id}
+                      type="button"
+                      onClick={() => setSelectedLocal(selectedLocal === locale.id ? "" : locale.id)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        selectedLocal === locale.id
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      {locale.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Monto inicial ($)</Label>
               <Input

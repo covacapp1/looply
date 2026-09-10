@@ -15,7 +15,7 @@ const tabs = [
   { id: "cajeros", label: "Historial de cajeros" },
   { id: "ranking", label: "Ranking productos" },
   { id: "rentabilidad", label: "Rentabilidad" },
-  { id: "depositos", label: "Depósitos" },
+  { id: "depositos", label: "Locales" },
 ];
 
 export default function StatisticsPage() {

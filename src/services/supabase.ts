@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import type { LoyaltyReward, Customer, StampHistory, MenuItem, ShopCustomer, Order, Sale, DailyRegister, CuentaCorriente, ProductVariant } from "@/types";
+import type { LoyaltyReward, Customer, StampHistory, MenuItem, ShopCustomer, Order, Sale, DailyRegister, CuentaCorriente, ProductVariant, Locale } from "@/types";
 
 function migrateVariants(variants: any[]): ProductVariant[] {
   return (variants || []).map((v: any) => ({
@@ -787,6 +787,35 @@ export async function deleteSale(saleId: string): Promise<boolean> {
   return true;
 }
 
+// ========== LOCALES ==========
+export async function getLocales(merchantId: string): Promise<Locale[]> {
+  if (!isSupabaseConfigured() || !supabase) return [];
+  const { data, error } = await supabase
+    .from("locales")
+    .select("*")
+    .eq("merchant_id", merchantId)
+    .order("created_at", { ascending: false });
+  if (error) return [];
+  return data.map((l) => ({ id: l.id, merchantId: l.merchant_id, name: l.name, createdAt: new Date(l.created_at) }));
+}
+
+export async function createLocale(merchantId: string, name: string): Promise<Locale | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+  const { data, error } = await supabase
+    .from("locales")
+    .insert({ merchant_id: merchantId, name })
+    .select()
+    .single();
+  if (error || !data) return null;
+  return { id: data.id, merchantId: data.merchant_id, name: data.name, createdAt: new Date(data.created_at) };
+}
+
+export async function deleteLocale(localeId: string): Promise<boolean> {
+  if (!isSupabaseConfigured() || !supabase) return false;
+  const { error } = await supabase.from("locales").delete().eq("id", localeId);
+  return !error;
+}
+
 // ========== DAILY REGISTERS ==========
 export async function getOpenRegister(merchantId: string): Promise<DailyRegister | null> {
   if (!isSupabaseConfigured() || !supabase) return null;
@@ -809,10 +838,11 @@ export async function getOpenRegister(merchantId: string): Promise<DailyRegister
     status: data.status,
     openedAt: new Date(data.opened_at),
     closedAt: data.closed_at ? new Date(data.closed_at) : null,
+    localId: data.local_id || null,
   };
 }
 
-export async function openRegister(merchantId: string, openingAmount: number): Promise<DailyRegister | null> {
+export async function openRegister(merchantId: string, openingAmount: number, localId?: string | null): Promise<DailyRegister | null> {
   if (!isSupabaseConfigured() || !supabase) return null;
 
   const { data, error } = await supabase
@@ -820,6 +850,7 @@ export async function openRegister(merchantId: string, openingAmount: number): P
     .insert({
       merchant_id: merchantId,
       opening_amount: openingAmount,
+      local_id: localId || null,
     })
     .select()
     .single();
@@ -837,6 +868,7 @@ export async function openRegister(merchantId: string, openingAmount: number): P
     status: data.status,
     openedAt: new Date(data.opened_at),
     closedAt: data.closed_at ? new Date(data.closed_at) : null,
+    localId: data.local_id || null,
   };
 }
 
