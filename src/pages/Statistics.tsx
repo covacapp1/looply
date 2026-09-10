@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, ShoppingCart, Link, CreditCard, DollarSign, TrendingUp, Package, Users, Calendar, Lock, Star, Warehouse } from "lucide-react";
+import { BarChart3, ShoppingCart, Link, CreditCard, DollarSign, TrendingUp, Users, Calendar, Lock, Star, Warehouse } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOrdersByMerchant, getSalesByMerchant, getShopCustomers, getMenuItems, getClosedRegisters } from "@/services/supabase";
 import { supabase } from "@/lib/supabase";
@@ -16,7 +16,6 @@ const tabs = [
   { id: "ranking", label: "Ranking productos" },
   { id: "rentabilidad", label: "Rentabilidad" },
   { id: "depositos", label: "Depósitos" },
-  { id: "mercaderia", label: "Mercadería en Depósitos" },
 ];
 
 export default function StatisticsPage() {
@@ -305,16 +304,6 @@ export default function StatisticsPage() {
           <Card className="border-border"><CardContent className="p-6 text-center text-muted-foreground">
             <Warehouse className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p>Próximamente: gestión de depósitos</p>
-          </CardContent></Card>
-        </div>
-      )}
-
-      {activeTab === "mercaderia" && (
-        <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Mercadería en Depósitos</h2>
-          <Card className="border-border"><CardContent className="p-6 text-center text-muted-foreground">
-            <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>Próximamente: inventario de mercadería</p>
           </CardContent></Card>
         </div>
       )}
