@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
 
-const navItems = [
+const adminNavItems = [
   { label: "Menú", href: "/" },
   { label: "Cargar Venta", href: "/cargar-venta" },
   { label: "Caja", href: "/caja" },
@@ -16,7 +16,16 @@ const navItems = [
   { label: "Menú Digital", href: "/menu" },
   { label: "Clientes", href: "/customers" },
   { label: "Reportes", href: "/statistics" },
+  { label: "Cajeros", href: "/cajeros" },
   { label: "Configuración", href: "/settings" },
+];
+
+const cajeroNavItems = [
+  { label: "Menú", href: "/" },
+  { label: "Cargar Venta", href: "/cargar-venta" },
+  { label: "Caja", href: "/caja" },
+  { label: "Pedidos", href: "/orders" },
+  { label: "Tarjetas de Fidelidad", href: "/loyalty" },
 ];
 
 const adminItems = [
@@ -31,6 +40,9 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
   const { profile, signOut } = useAuth();
+
+  const isCajero = profile?.role === "cajero";
+  const navItems = isCajero ? cajeroNavItems : adminNavItems;
 
   return (
     <>
@@ -76,25 +88,29 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </Link>
                 );
               })}
-              <div className="mx-5 my-2 border-t border-border" />
-              {profile?.role === "admin" && adminItems.map((item) => {
-                const isActive = location.pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    to={item.href}
-                    className={cn(
-                      "block px-5 py-3 text-sm transition-colors border-l-4",
-                      isActive
-                        ? "bg-amber-500/10 text-amber-600 border-amber-500 font-medium"
-                        : "text-amber-600 border-transparent hover:bg-amber-500/10 hover:text-amber-700 hover:border-amber-500/30"
-                    )}
-                    onClick={onClose}
-                  >
-                    ⚡ {item.label}
-                  </Link>
-                );
-              })}
+              {!isCajero && (
+                <>
+                  <div className="mx-5 my-2 border-t border-border" />
+                  {profile?.role === "admin" && adminItems.map((item) => {
+                    const isActive = location.pathname === item.href;
+                    return (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        className={cn(
+                          "block px-5 py-3 text-sm transition-colors border-l-4",
+                          isActive
+                            ? "bg-amber-500/10 text-amber-600 border-amber-500 font-medium"
+                            : "text-amber-600 border-transparent hover:bg-amber-500/10 hover:text-amber-700 hover:border-amber-500/30"
+                        )}
+                        onClick={onClose}
+                      >
+                        ⚡ {item.label}
+                      </Link>
+                    );
+                  })}
+                </>
+              )}
             </nav>
           </ScrollArea>
 

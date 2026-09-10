@@ -20,6 +20,7 @@ import ShopPage from "@/pages/Shop";
 import CajaPage from "@/pages/Caja";
 import CuentaCorrientePage from "@/pages/CuentaCorriente";
 import CargarVentaPage from "@/pages/CargarVenta";
+import CajerosPage from "@/pages/Cajeros";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -115,6 +116,9 @@ export default function App() {
               <Route path="/cuenta-corriente" element={<CuentaCorrientePage />} />
               <Route path="/caja" element={<CajaPage />} />
               <Route path="/cargar-venta" element={<CargarVentaPage />} />
+              <Route path="/cajeros" element={
+                <AdminRoute><CajerosPage /></AdminRoute>
+              } />
               <Route path="/settings" element={<SettingsPage />} />
               <Route
                 path="/admin"
