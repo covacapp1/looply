@@ -29,6 +29,12 @@ export default function StatisticsPage() {
   const [fidelidadCount, setFidelidadCount] = useState(0);
   const [clientesCount, setClientesCount] = useState(0);
   const [selectedRegister, setSelectedRegister] = useState<DailyRegister | null>(null);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [monthFrom, setMonthFrom] = useState(1);
+  const [monthTo, setMonthTo] = useState(12);
+  const [selectedMonthDetail, setSelectedMonthDetail] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(6);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -147,6 +153,45 @@ export default function StatisticsPage() {
     }));
     return { sales: regSales, orders: regOrders, total, paymentBreakdown, items: items.sort((a, b) => b.total - a.total) };
   }, [selectedRegister, sales, orders, menuItemsMap]);
+
+  // --- Datos anuales por mes ---
+  const yearData = useMemo(() => {
+    const months = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
+    const yearOrders = orders.filter((o) => new Date(o.createdAt).getFullYear() === selectedYear);
+    const yearSales = sales.filter((s) => new Date(s.createdAt).getFullYear() === selectedYear);
+    const totalYearVentas = yearOrders.reduce((s, o) => s + o.total, 0) + yearSales.reduce((s, sr) => s + sr.amount, 0);
+    return months.map((name, idx) => {
+      const monthOrders = yearOrders.filter((o) => new Date(o.createdAt).getMonth() === idx);
+      const monthSalesList = yearSales.filter((s) => new Date(s.createdAt).getMonth() === idx);
+      const ventas = monthOrders.reduce((s, o) => s + o.total, 0) + monthSalesList.reduce((s, sr) => s + sr.amount, 0);
+      let costos = 0;
+      monthOrders.forEach((o) => o.items.forEach((i) => { const mi = menuItemsMap.get(i.menuItemId); if (mi) costos += mi.cost * i.quantity; }));
+      const beneficios = ventas - costos;
+      const rentabilidad = ventas > 0 ? Math.round((beneficios / ventas) * 100) : 0;
+      const pctAnio = totalYearVentas > 0 ? Math.round((ventas / totalYearVentas) * 100) : 0;
+      return { name, month: idx, ventas, costos, beneficios, total: ventas, rentabilidad, pctAnio, orderCount: monthOrders.length, saleCount: monthSalesList.length };
+    });
+  }, [orders, sales, selectedYear, menuItemsMap]);
+
+  const filteredYearData = yearData.filter((m) => m.month + 1 >= monthFrom && m.month + 1 <= monthTo);
+  const totalPages = Math.ceil(filteredYearData.length / rowsPerPage);
+  const pagedYearData = filteredYearData.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+  const monthDetail = useMemo(() => {
+    if (selectedMonthDetail === null) return null;
+    const m = yearData[selectedMonthDetail];
+    if (!m) return null;
+    const monthOrders = orders.filter((o) => { const d = new Date(o.createdAt); return d.getFullYear() === selectedYear && d.getMonth() === selectedMonthDetail; });
+    const monthSalesList = sales.filter((s) => { const d = new Date(s.createdAt); return d.getFullYear() === selectedYear && d.getMonth() === selectedMonthDetail; });
+    const allItems: { date: string; name: string; qty: number; price: number; subtotal: number; payment: string }[] = [];
+    monthOrders.forEach((o) => o.items.forEach((i) => {
+      allItems.push({ date: new Date(o.createdAt).toLocaleDateString("es-AR"), name: menuItemsMap.get(i.menuItemId)?.name || i.name, qty: i.quantity, price: i.price, subtotal: i.price * i.quantity, payment: o.paymentMethod || "Pedido" });
+    }));
+    monthSalesList.forEach((s) => {
+      allItems.push({ date: new Date(s.createdAt).toLocaleDateString("es-AR"), name: s.description, qty: 1, price: s.amount, subtotal: s.amount, payment: s.paymentMethod || "Manual" });
+    });
+    return { ...m, items: allItems.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) };
+  }, [selectedMonthDetail, yearData, orders, sales, selectedYear, menuItemsMap]);
 
   if (loading) {
     return (
@@ -312,25 +357,154 @@ export default function StatisticsPage() {
 
       {activeTab === "mes" && (
         <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Ventas del Mes</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Card className="border-border"><CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Ingresos</p>
-              <p className="text-lg font-bold text-emerald-600">${monthlyStats.ventas.toLocaleString("es-AR")}</p>
-            </CardContent></Card>
-            <Card className="border-border"><CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Costos</p>
-              <p className="text-lg font-bold text-red-600">${monthlyStats.costos.toLocaleString("es-AR")}</p>
-            </CardContent></Card>
-            <Card className="border-border"><CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Ganancia</p>
-              <p className="text-lg font-bold text-primary">${monthlyStats.ganancia.toLocaleString("es-AR")}</p>
-            </CardContent></Card>
-            <Card className="border-border"><CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Pedidos</p>
-              <p className="text-lg font-bold text-foreground">{monthlyStats.pedidos}</p>
-            </CardContent></Card>
-          </div>
+          {selectedMonthDetail !== null && monthDetail ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setSelectedMonthDetail(null)} className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors">
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">{monthDetail.name} {selectedYear}</h2>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Card className="border-border"><CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Ventas</p>
+                  <p className="text-lg font-bold text-foreground">{monthDetail.orderCount + monthDetail.saleCount}</p>
+                </CardContent></Card>
+                <Card className="border-border"><CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Total</p>
+                  <p className="text-lg font-bold text-emerald-600">${monthDetail.ventas.toLocaleString("es-AR")}</p>
+                </CardContent></Card>
+                <Card className="border-border"><CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Costos</p>
+                  <p className="text-lg font-bold text-red-600">${monthDetail.costos.toLocaleString("es-AR")}</p>
+                </CardContent></Card>
+                <Card className="border-border"><CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Beneficio</p>
+                  <p className="text-lg font-bold text-primary">${monthDetail.beneficios.toLocaleString("es-AR")}</p>
+                </CardContent></Card>
+              </div>
+              {monthDetail.items.length > 0 ? (
+                <Card className="border-border">
+                  <CardContent className="p-4">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Detalle de productos vendidos</p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                            <th className="pb-2 font-medium">Fecha</th>
+                            <th className="pb-2 font-medium">Producto</th>
+                            <th className="pb-2 font-medium text-center">Cant.</th>
+                            <th className="pb-2 font-medium text-right">Precio</th>
+                            <th className="pb-2 font-medium text-right">Subtotal</th>
+                            <th className="pb-2 font-medium text-right">Pago</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {monthDetail.items.map((item, idx) => (
+                            <tr key={idx} className="border-b border-border last:border-0">
+                              <td className="py-2 text-foreground">{item.date}</td>
+                              <td className="py-2 text-foreground">{item.name}</td>
+                              <td className="py-2 text-center text-foreground">{item.qty}</td>
+                              <td className="py-2 text-right text-foreground">${item.price.toLocaleString("es-AR")}</td>
+                              <td className="py-2 text-right font-medium text-foreground">${item.subtotal.toLocaleString("es-AR")}</td>
+                              <td className="py-2 text-right"><Badge variant="outline" className="text-[10px] uppercase">{item.payment}</Badge></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="border-border"><CardContent className="p-6 text-center text-muted-foreground">Sin ventas este mes</CardContent></Card>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground">
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+                <select value={monthFrom} onChange={(e) => { setMonthFrom(parseInt(e.target.value)); setCurrentPage(1); }} className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground">
+                  {["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"].map((m, i) => <option key={i} value={i + 1}>Desde {m}</option>)}
+                </select>
+                <select value={monthTo} onChange={(e) => { setMonthTo(parseInt(e.target.value)); setCurrentPage(1); }} className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground">
+                  {["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"].map((m, i) => <option key={i} value={i + 1}>Hasta {m}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <Card className="border-border"><CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Total ventas del año</p>
+                  <p className="text-lg font-bold text-foreground">${yearData.reduce((s, m) => s + m.ventas, 0).toLocaleString("es-AR")}</p>
+                </CardContent></Card>
+                <Card className="border-border"><CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Beneficio del año</p>
+                  <p className="text-lg font-bold text-foreground">${yearData.reduce((s, m) => s + m.beneficios, 0).toLocaleString("es-AR")}</p>
+                </CardContent></Card>
+                <Card className="border-border"><CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Rentabilidad promedio</p>
+                  <p className="text-lg font-bold text-foreground">{yearData.length > 0 ? Math.round(yearData.reduce((s, m) => s + m.rentabilidad, 0) / yearData.length) : 0}%</p>
+                </CardContent></Card>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                      <th className="pb-2 font-medium">Mes</th>
+                      <th className="pb-2 font-medium text-right">Ventas</th>
+                      <th className="pb-2 font-medium text-right">Costos</th>
+                      <th className="pb-2 font-medium text-right">Beneficios</th>
+                      <th className="pb-2 font-medium text-right">Total</th>
+                      <th className="pb-2 font-medium text-right">Rentabilidad</th>
+                      <th className="pb-2 font-medium text-right">% año</th>
+                      <th className="pb-2 font-medium text-center">Ver</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedYearData.map((m) => (
+                      <tr key={m.month} className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
+                        <td className="py-3 font-medium text-foreground">{m.name}</td>
+                        <td className="py-3 text-right text-foreground">{m.orderCount + m.saleCount}</td>
+                        <td className="py-3 text-right text-red-600">${m.costos.toLocaleString("es-AR")}</td>
+                        <td className="py-3 text-right text-emerald-600">${m.beneficios.toLocaleString("es-AR")}</td>
+                        <td className="py-3 text-right font-bold text-foreground">${m.ventas.toLocaleString("es-AR")}</td>
+                        <td className="py-3 text-right text-foreground">{m.rentabilidad}%</td>
+                        <td className="py-3 text-right text-foreground">{m.pctAnio}%</td>
+                        <td className="py-3 text-center">
+                          <button onClick={() => setSelectedMonthDetail(m.month)} className="px-3 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">
+                            Ver
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {filteredYearData.length === 0 && (
+                <Card className="border-border"><CardContent className="p-6 text-center text-muted-foreground">No hay datos para este período</CardContent></Card>
+              )}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <span>Filas por página:</span>
+                    <select value={rowsPerPage} onChange={(e) => { setRowsPerPage(parseInt(e.target.value)); setCurrentPage(1); }} className="px-2 py-1 rounded border border-border bg-background text-foreground text-xs">
+                      <option value={6}>6</option>
+                      <option value={12}>12</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>{currentPage} / {totalPages}</span>
+                    <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 rounded border border-border text-xs disabled:opacity-50 hover:bg-muted transition-colors">Anterior</button>
+                    <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 rounded border border-border text-xs disabled:opacity-50 hover:bg-muted transition-colors">Siguiente</button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
