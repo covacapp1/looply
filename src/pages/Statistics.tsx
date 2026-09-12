@@ -510,23 +510,51 @@ export default function StatisticsPage() {
 
       {activeTab === "anio" && (
         <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Ventas por Año ({currentYear})</h2>
-          <div className="space-y-2">
-            {Object.entries(yearlyByMonth).map(([month, data]) => (
-              <Card key={month} className="border-border">
-                <CardContent className="p-3 flex items-center justify-between">
-                  <p className="text-sm font-medium text-foreground capitalize">{month}</p>
-                  <div className="flex gap-4 text-sm">
-                    <span className="text-muted-foreground">{data.pedidos} pedidos</span>
-                    <span className="font-bold text-emerald-600">${data.ventas.toLocaleString("es-AR")}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            {Object.keys(yearlyByMonth).length === 0 && (
-              <Card className="border-border"><CardContent className="p-6 text-center text-muted-foreground">No hay datos este año</CardContent></Card>
-            )}
-          </div>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Ventas por Año</h2>
+          {(() => {
+            const years: Record<number, { ventas: number; costos: number }> = {};
+            orders.forEach((o) => {
+              const y = new Date(o.createdAt).getFullYear();
+              if (!years[y]) years[y] = { ventas: 0, costos: 0 };
+              years[y].ventas += o.total;
+              o.items.forEach((i) => { const mi = menuItemsMap.get(i.menuItemId); if (mi) years[y].costos += mi.cost * i.quantity; });
+            });
+            sales.forEach((s) => {
+              const y = new Date(s.createdAt).getFullYear();
+              if (!years[y]) years[y] = { ventas: 0, costos: 0 };
+              years[y].ventas += s.amount;
+            });
+            const sorted = Object.entries(years).map(([y, d]) => ({ year: parseInt(y), ...d, beneficio: d.ventas - d.costos })).sort((a, b) => b.year - a.year);
+            const totalAcumulado = sorted.reduce((s, y) => s + y.ventas, 0);
+            if (sorted.length === 0) return <Card className="border-border"><CardContent className="p-6 text-center text-muted-foreground">No hay datos</CardContent></Card>;
+            return (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                        <th className="pb-2 font-medium">Año</th>
+                        <th className="pb-2 font-medium text-right">Costo</th>
+                        <th className="pb-2 font-medium text-right">Beneficio</th>
+                        <th className="pb-2 font-medium text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sorted.map((y) => (
+                        <tr key={y.year} className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
+                          <td className="py-3 font-medium text-foreground">{y.year}</td>
+                          <td className="py-3 text-right text-red-600">${y.costos.toLocaleString("es-AR")}</td>
+                          <td className="py-3 text-right text-emerald-600">${y.beneficio.toLocaleString("es-AR")}</td>
+                          <td className="py-3 text-right font-bold text-foreground">${y.ventas.toLocaleString("es-AR")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">Total acumulado: ${totalAcumulado.toLocaleString("es-AR")}</p>
+              </>
+            );
+          })()}
         </div>
       )}
 
