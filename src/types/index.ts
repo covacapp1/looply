@@ -130,6 +130,7 @@ export interface Order {
   total: number;
   notes?: string;
   status: "pending" | "confirmed" | "cancelled";
+  paymentMethod?: string;
   createdAt: Date;
   updatedAt: Date;
 }
