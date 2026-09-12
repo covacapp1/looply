@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, ShoppingCart, Link, CreditCard, DollarSign, TrendingUp, Users, Calendar, Lock, Star, Warehouse } from "lucide-react";
+import { BarChart3, ShoppingCart, Link, CreditCard, DollarSign, TrendingUp, Users, Calendar, Lock, Star, Warehouse, Eye, ArrowLeft, Wallet } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOrdersByMerchant, getSalesByMerchant, getShopCustomers, getMenuItems, getClosedRegisters } from "@/services/supabase";
 import { supabase } from "@/lib/supabase";
@@ -28,6 +28,7 @@ export default function StatisticsPage() {
   const [registers, setRegisters] = useState<DailyRegister[]>([]);
   const [fidelidadCount, setFidelidadCount] = useState(0);
   const [clientesCount, setClientesCount] = useState(0);
+  const [selectedRegister, setSelectedRegister] = useState<DailyRegister | null>(null);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -115,6 +116,38 @@ export default function StatisticsPage() {
     return Object.values(counts).sort((a, b) => b.count - a.count);
   }, [orders, menuItemsMap]);
 
+  // --- Detalle de caja seleccionada ---
+  const registerDetail = useMemo(() => {
+    if (!selectedRegister) return null;
+    const from = new Date(selectedRegister.openedAt);
+    const to = selectedRegister.closedAt ? new Date(selectedRegister.closedAt) : new Date();
+    const regSales = sales.filter((s) => {
+      const d = new Date(s.createdAt);
+      return d >= from && d <= to;
+    });
+    const regOrders = orders.filter((o) => {
+      const d = new Date(o.createdAt);
+      return d >= from && d <= to;
+    });
+    const total = regSales.reduce((sum, s) => sum + s.amount, 0) + regOrders.reduce((sum, o) => sum + o.total, 0);
+    const paymentBreakdown: Record<string, number> = {};
+    regSales.forEach((s) => {
+      const method = s.paymentMethod || "manual";
+      paymentBreakdown[method] = (paymentBreakdown[method] || 0) + s.amount;
+    });
+    regOrders.forEach((o) => {
+      const method = o.paymentMethod || "order";
+      paymentBreakdown[method] = (paymentBreakdown[method] || 0) + o.total;
+    });
+    const items: { name: string; qty: number; total: number }[] = [];
+    regOrders.forEach((o) => o.items.forEach((i) => {
+      const existing = items.find((x) => x.name === (menuItemsMap.get(i.menuItemId)?.name || i.name));
+      if (existing) { existing.qty += i.quantity; existing.total += i.price * i.quantity; }
+      else items.push({ name: menuItemsMap.get(i.menuItemId)?.name || i.name, qty: i.quantity, total: i.price * i.quantity });
+    }));
+    return { sales: regSales, orders: regOrders, total, paymentBreakdown, items: items.sort((a, b) => b.total - a.total) };
+  }, [selectedRegister, sales, orders, menuItemsMap]);
+
   if (loading) {
     return (
       <div>
@@ -150,31 +183,129 @@ export default function StatisticsPage() {
       {/* Tab Content */}
       {activeTab === "cajas" && (
         <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Historial de Cajas</h2>
-          {registers.length === 0 ? (
-            <Card className="border-border"><CardContent className="p-6 text-center text-muted-foreground"><Lock className="h-8 w-8 mx-auto mb-2 opacity-50" /><p>No hay cajas cerradas</p></CardContent></Card>
-          ) : (
-            <div className="space-y-2">
-              {registers.map((reg) => (
-                <Card key={reg.id} className="border-border">
-                  <CardContent className="p-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-                        <Lock className="h-4 w-4 text-emerald-600" />
+          {selectedRegister && registerDetail ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-3">
+                <button
+                  onClick={() => setSelectedRegister(null)}
+                  className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </button>
+                <div>
+                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    Caja del {new Date(selectedRegister.openedAt).toLocaleDateString("es-AR")}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(selectedRegister.openedAt).toLocaleTimeString("es-AR")} - {selectedRegister.closedAt ? new Date(selectedRegister.closedAt).toLocaleTimeString("es-AR") : "Abierta"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Resumen */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Card className="border-border"><CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Apertura</p>
+                  <p className="text-lg font-bold text-foreground">${selectedRegister.openingAmount.toLocaleString("es-AR")}</p>
+                </CardContent></Card>
+                <Card className="border-border"><CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Cierre</p>
+                  <p className="text-lg font-bold text-foreground">${(selectedRegister.closingAmount || 0).toLocaleString("es-AR")}</p>
+                </CardContent></Card>
+                <Card className="border-border"><CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Ingresos</p>
+                  <p className="text-lg font-bold text-emerald-600">${registerDetail.total.toLocaleString("es-AR")}</p>
+                </CardContent></Card>
+                <Card className="border-border"><CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Movimientos</p>
+                  <p className="text-lg font-bold text-foreground">{registerDetail.sales.length + registerDetail.orders.length}</p>
+                </CardContent></Card>
+              </div>
+
+              {/* Desglose por método de pago */}
+              <Card className="border-border">
+                <CardContent className="p-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Ingresos por Método de Pago</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {[
+                      { key: "efectivo", label: "Efectivo", color: "text-emerald-600" },
+                      { key: "transferencia", label: "Transferencia", color: "text-amber-600" },
+                      { key: "debito", label: "Débito", color: "text-blue-600" },
+                      { key: "credito", label: "Crédito", color: "text-violet-600" },
+                      { key: "qr", label: "QR", color: "text-cyan-600" },
+                      { key: "delivery", label: "Delivery", color: "text-rose-600" },
+                    ].map((m) => (
+                      <div key={m.key} className="text-center">
+                        <p className="text-xs text-muted-foreground mb-1">{m.label}</p>
+                        <p className={`text-sm font-bold ${m.color}`}>
+                          ${(registerDetail.paymentBreakdown[m.key] || 0).toLocaleString("es-AR")}
+                        </p>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{new Date(reg.openedAt).toLocaleDateString("es-AR")}</p>
-                        <p className="text-xs text-muted-foreground">Apertura: ${reg.openingAmount.toLocaleString("es-AR")}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-foreground">${(reg.closingAmount || 0).toLocaleString("es-AR")}</p>
-                      <Badge variant="outline" className="text-[10px]">Cerrada</Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Productos vendidos */}
+              {registerDetail.items.length > 0 && (
+                <Card className="border-border">
+                  <CardContent className="p-4">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Productos Vendidos</p>
+                    <div className="space-y-2">
+                      {registerDetail.items.map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground w-5">#{idx + 1}</span>
+                            <span className="text-sm text-foreground">{item.name}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-muted-foreground">x{item.qty}</span>
+                            <span className="text-sm font-bold text-emerald-600">${item.total.toLocaleString("es-AR")}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )}
             </div>
+          ) : (
+            <>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Historial de Cajas</h2>
+              {registers.length === 0 ? (
+                <Card className="border-border"><CardContent className="p-6 text-center text-muted-foreground"><Lock className="h-8 w-8 mx-auto mb-2 opacity-50" /><p>No hay cajas cerradas</p></CardContent></Card>
+              ) : (
+                <div className="space-y-2">
+                  {registers.map((reg) => (
+                    <Card key={reg.id} className="border-border">
+                      <CardContent className="p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                            <Lock className="h-4 w-4 text-emerald-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{new Date(reg.openedAt).toLocaleDateString("es-AR")}</p>
+                            <p className="text-xs text-muted-foreground">Apertura: ${reg.openingAmount.toLocaleString("es-AR")}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-foreground">${(reg.closingAmount || 0).toLocaleString("es-AR")}</p>
+                            <Badge variant="outline" className="text-[10px]">Cerrada</Badge>
+                          </div>
+                          <button
+                            onClick={() => setSelectedRegister(reg)}
+                            className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
