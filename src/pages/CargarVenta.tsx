@@ -1,17 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Search, ShoppingCart, DollarSign, CreditCard, Smartphone, Truck, QrCode, ArrowLeft, Plus, Minus } from "lucide-react";
+import { Search, ShoppingCart, DollarSign, CreditCard, Smartphone, Truck, QrCode, ArrowLeft, Plus, Minus, X, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getMenuItems, createSale, getOpenRegister } from "@/services/supabase";
 import type { MenuItem, ProductVariant } from "@/types";
 import { toast } from "sonner";
+
+interface CartItem {
+  productId: string;
+  productName: string;
+  variants: Record<string, Record<string, number>>;
+  qty: number;
+}
 
 const paymentMethods = [
   { id: "efectivo", label: "Efectivo", icon: DollarSign, color: "bg-emerald-100 text-emerald-600" },
@@ -33,12 +40,13 @@ export default function CargarVentaPage() {
   // Search
   const [search, setSearch] = useState("");
 
-  // Selection
-  const [selectedProduct, setSelectedProduct] = useState<string>("");
-  // Multi-select variants: { variantName: { optionName: quantity } }
-  const [selectedVariants, setSelectedVariants] = useState<Record<string, Record<string, number>>>({});
-  const [qty, setQty] = useState("1");
-  const [customDesc, setCustomDesc] = useState("");
+  // Active product (being configured before adding to cart)
+  const [activeProductId, setActiveProductId] = useState<string>("");
+  const [activeVariants, setActiveVariants] = useState<Record<string, Record<string, number>>>({});
+  const [activeQty, setActiveQty] = useState("1");
+
+  // Cart
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
   // Payment
   const [paymentMethod, setPaymentMethod] = useState("");
@@ -63,17 +71,13 @@ export default function CargarVentaPage() {
   );
 
   function handleProductSelect(productId: string) {
-    setSelectedProduct(productId);
-    setSelectedVariants({});
-    setQty("1");
-    const item = menuItems.find((m) => m.id === productId);
-    if (item) {
-      setCustomDesc(item.name);
-    }
+    setActiveProductId(productId);
+    setActiveVariants({});
+    setActiveQty("1");
   }
 
   function toggleVariantOption(variantName: string, optionName: string) {
-    setSelectedVariants((prev) => {
+    setActiveVariants((prev) => {
       const group = prev[variantName] || {};
       const currentQty = group[optionName] || 0;
       const newGroup = { ...group };
@@ -93,7 +97,7 @@ export default function CargarVentaPage() {
   }
 
   function setVariantOptionQty(variantName: string, optionName: string, newQty: number) {
-    setSelectedVariants((prev) => {
+    setActiveVariants((prev) => {
       const group = prev[variantName] || {};
       const newGroup = { ...group };
       if (newQty <= 0) {
@@ -111,12 +115,54 @@ export default function CargarVentaPage() {
     });
   }
 
-  function getTotal(): number {
-    const item = menuItems.find((m) => m.id === selectedProduct);
-    if (!item) return 0;
+  function addToCart() {
+    const item = menuItems.find((m) => m.id === activeProductId);
+    if (!item) return;
+    const quantity = parseInt(activeQty) || 1;
+    setCartItems((prev) => [
+      ...prev,
+      {
+        productId: item.id,
+        productName: item.name,
+        variants: { ...activeVariants },
+        qty: quantity,
+      },
+    ]);
+    setActiveProductId("");
+    setActiveVariants({});
+    setActiveQty("1");
+  }
+
+  function removeFromCart(index: number) {
+    setCartItems((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateCartItemQty(index: number, newQty: number) {
+    if (newQty <= 0) {
+      removeFromCart(index);
+      return;
+    }
+    setCartItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, qty: newQty } : item))
+    );
+  }
+
+  function getCartItemVariantSummary(item: CartItem): string {
+    const parts: string[] = [];
+    for (const [, options] of Object.entries(item.variants)) {
+      for (const [optionName, optQty] of Object.entries(options)) {
+        parts.push(`${optionName}${optQty > 1 ? ` x${optQty}` : ""}`);
+      }
+    }
+    return parts.join(", ");
+  }
+
+  function getCartItemUnitPrice(item: CartItem): number {
+    const menuItem = menuItems.find((m) => m.id === item.productId);
+    if (!menuItem) return 0;
     let variantTotal = 0;
-    for (const [variantName, options] of Object.entries(selectedVariants)) {
-      const variant = item.variants?.find((v) => v.name === variantName);
+    for (const [variantName, options] of Object.entries(item.variants)) {
+      const variant = menuItem.variants?.find((v) => v.name === variantName);
       if (!variant) continue;
       for (const [optionName, optQty] of Object.entries(options)) {
         const option = variant.options.find((o) => o.name === optionName);
@@ -125,28 +171,29 @@ export default function CargarVentaPage() {
         }
       }
     }
-    const quantity = parseInt(qty) || 1;
-    return (item.price + variantTotal) * quantity;
+    return menuItem.price + variantTotal;
   }
 
-  function getSelectedVariantSummary(): string {
-    const parts: string[] = [];
-    for (const [variantName, options] of Object.entries(selectedVariants)) {
-      for (const [optionName, optQty] of Object.entries(options)) {
-        parts.push(`${optionName}${optQty > 1 ? ` x${optQty}` : ""}`);
-      }
-    }
-    return parts.join(", ");
+  function getCartTotal(): number {
+    return cartItems.reduce((sum, item) => sum + getCartItemUnitPrice(item) * item.qty, 0);
+  }
+
+  function getCartDescription(): string {
+    return cartItems
+      .map((item) => {
+        const variantSummary = getCartItemVariantSummary(item);
+        return `${item.productName} x${item.qty}${variantSummary ? ` (${variantSummary})` : ""}`;
+      })
+      .join(", ");
   }
 
   async function handleSave() {
     if (!user || !hasRegister) return;
-    const total = getTotal();
+    const total = getCartTotal();
     if (total <= 0) return;
     setSaving(true);
 
-    const variantSummary = getSelectedVariantSummary();
-    const desc = `${customDesc} x${qty}${variantSummary ? ` (${variantSummary})` : ""}`;
+    const desc = getCartDescription();
 
     const sale = await createSale({
       merchantId: user.id,
@@ -158,10 +205,10 @@ export default function CargarVentaPage() {
 
     if (sale) {
       toast.success("Venta registrada");
-      setSelectedProduct("");
-      setSelectedVariants({});
-      setQty("1");
-      setCustomDesc("");
+      setCartItems([]);
+      setActiveProductId("");
+      setActiveVariants({});
+      setActiveQty("1");
       setPaymentMethod("");
       setSearch("");
       loadData();
@@ -169,7 +216,8 @@ export default function CargarVentaPage() {
     setSaving(false);
   }
 
-  const total = getTotal();
+  const total = getCartTotal();
+  const activeItem = menuItems.find((m) => m.id === activeProductId);
 
   return (
     <div className="space-y-6">
@@ -218,7 +266,7 @@ export default function CargarVentaPage() {
               type="button"
               onClick={() => handleProductSelect(item.id)}
               className={`p-3 rounded-xl border text-left transition-all ${
-                selectedProduct === item.id
+                activeProductId === item.id
                   ? "border-primary bg-primary/5 ring-2 ring-primary shadow-sm"
                   : "border-border hover:border-primary/30"
               }`}
@@ -237,21 +285,31 @@ export default function CargarVentaPage() {
         </div>
       )}
 
-      {/* Variant selection + quantity + payment */}
-      {selectedProduct && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-4"
-        >
-          {/* Multi-select variants */}
-          {(() => {
-            const item = menuItems.find((m) => m.id === selectedProduct);
-            if (!item || !item.variants || item.variants.length === 0) return null;
-            return (
+      {/* Active product: variant selection + quantity + add to cart */}
+      <AnimatePresence>
+        {activeItem && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">{activeItem.name}</h3>
+              <button
+                type="button"
+                onClick={() => { setActiveProductId(""); setActiveVariants({}); setActiveQty("1"); }}
+                className="h-6 w-6 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+
+            {/* Variants */}
+            {activeItem.variants && activeItem.variants.length > 0 && (
               <div className="space-y-3">
-                {item.variants.map((variant: ProductVariant) => {
-                  const selectedGroup = selectedVariants[variant.name] || {};
+                {activeItem.variants.map((variant: ProductVariant) => {
+                  const selectedGroup = activeVariants[variant.name] || {};
                   return (
                     <div key={variant.name}>
                       <Label className="text-xs text-muted-foreground mb-1.5">{variant.name}</Label>
@@ -310,21 +368,114 @@ export default function CargarVentaPage() {
                   );
                 })}
               </div>
-            );
-          })()}
+            )}
 
-          {/* Quantity */}
-          <div className="space-y-2">
-            <Label>Cantidad</Label>
-            <Input
-              type="number"
-              min="1"
-              value={qty}
-              onChange={(e) => setQty(e.target.value)}
-              className="w-24"
-            />
+            {/* Quantity + Add to cart */}
+            <div className="flex items-center gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Cantidad</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={activeQty}
+                  onChange={(e) => setActiveQty(e.target.value)}
+                  className="w-20"
+                />
+              </div>
+              <div className="flex-1 flex items-end">
+                <Button onClick={addToCart} className="w-full">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Agregar al carrito
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Cart items */}
+      {cartItems.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-2"
+        >
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold text-foreground">
+              Carrito ({cartItems.length} {cartItems.length === 1 ? "item" : "items"})
+            </h3>
           </div>
+          <div className="space-y-2">
+            <AnimatePresence>
+              {cartItems.map((item, index) => {
+                const unitPrice = getCartItemUnitPrice(item);
+                const variantSummary = getCartItemVariantSummary(item);
+                return (
+                  <motion.div
+                    key={`${item.productId}-${index}`}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="border border-border rounded-xl p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">{item.productName}</p>
+                        {variantSummary && (
+                          <p className="text-xs text-muted-foreground">{variantSummary}</p>
+                        )}
+                        <p className="text-xs text-primary font-medium mt-1">
+                          ${unitPrice.toLocaleString("es-AR")} c/u
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 bg-muted rounded-full">
+                          <button
+                            type="button"
+                            className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-muted/80 text-foreground"
+                            onClick={() => updateCartItemQty(index, item.qty - 1)}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </button>
+                          <span className="w-6 text-center text-sm font-bold text-foreground">{item.qty}</span>
+                          <button
+                            type="button"
+                            className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-muted/80 text-foreground"
+                            onClick={() => updateCartItemQty(index, item.qty + 1)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFromCart(index)}
+                          className="h-7 w-7 rounded-full bg-destructive/10 flex items-center justify-center hover:bg-destructive/20 text-destructive"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex justify-end">
+                      <span className="text-sm font-bold text-foreground">
+                        ${(unitPrice * item.qty).toLocaleString("es-AR")}
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      )}
 
+      {/* Payment + Total + Save (always visible when cart has items) */}
+      {cartItems.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-4"
+        >
           {/* Payment Method */}
           <div className="space-y-2">
             <Label>Método de pago</Label>
