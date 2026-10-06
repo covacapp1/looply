@@ -276,15 +276,17 @@ export async function addStamp(customerId: string, userId?: string): Promise<Add
   let businessLogo = "";
 
   if (userId) {
-    const { data: settingsData } = await supabase
+    const { data: settingsData, error: settingsError } = await supabase
       .from("business_settings")
-      .select("name, logo")
+      .select("name")
       .eq("user_id", userId)
       .single();
-    
-    if (settingsData) {
+
+    if (!settingsError && settingsData) {
       businessName = settingsData.name || "Tu negocio";
-      businessLogo = settingsData.logo || "";
+    } else {
+      const local = JSON.parse(localStorage.getItem("businessSettings") || "{}");
+      businessName = local.name || "Tu negocio";
     }
   } else {
     const local = JSON.parse(localStorage.getItem("businessSettings") || "{}");
