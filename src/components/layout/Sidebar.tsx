@@ -13,6 +13,7 @@ const adminNavItems = [
   { label: "Pedidos", href: "/orders" },
   { label: "Cuenta Corriente", href: "/cuenta-corriente" },
   { label: "Tarjetas de Fidelidad", href: "/loyalty" },
+  { label: "Puntos", href: "/puntos" },
   { label: "Menú Digital", href: "/menu" },
   { label: "Clientes", href: "/customers" },
   { label: "Reportes", href: "/statistics" },

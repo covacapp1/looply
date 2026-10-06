@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ClipboardList, Clock, CheckCircle2, XCircle, Copy, ExternalLink, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getOrdersByMerchant, updateOrderStatus, createSale, createCuentaCorriente, getBusinessSettings, saveBusinessSettings, getOpenRegister } from "@/services/supabase";
+import { getOrdersByMerchant, updateOrderStatus, createSale, createCuentaCorriente, getBusinessSettings, saveBusinessSettings, getOpenRegister, awardPurchasePoints } from "@/services/supabase";
 import type { Order } from "@/types";
 import { toast } from "sonner";
 
@@ -124,6 +124,20 @@ export default function OrdersPage() {
         prev.map((o) => (o.id === order.id ? { ...o, status: "confirmed" } : o))
       );
       toast.success("Pedido confirmado y venta registrada en caja");
+
+      if (order.customerId) {
+        const awarded = await awardPurchasePoints(
+          user.id,
+          order.customerId,
+          order.total,
+          order.customerName
+        );
+        if (awarded) {
+          toast.success(
+            `⭐ +${awarded.points} puntos para ${awarded.customerName || "el cliente"}`
+          );
+        }
+      }
     }
     setUpdatingId(null);
   }

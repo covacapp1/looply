@@ -13,6 +13,7 @@ import {
   Users,
   MapPin,
   BookOpen,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +24,7 @@ const adminMenuItems = [
   { label: "Pedidos", href: "/orders", icon: ShoppingBag, color: "text-violet-500" },
   { label: "Cuenta Corriente", href: "/cuenta-corriente", icon: Receipt, color: "text-rose-500" },
   { label: "Tarjetas de Fidelidad", href: "/loyalty", icon: Heart, color: "text-rose-500" },
+  { label: "Puntos", href: "/puntos", icon: Star, color: "text-yellow-500" },
   { label: "Menú Digital", href: "/menu", icon: UtensilsCrossed, color: "text-orange-500" },
   { label: "Clientes", href: "/customers", icon: Contact, color: "text-sky-500" },
   { label: "Reportes", href: "/statistics", icon: BarChart3, color: "text-lime-500" },

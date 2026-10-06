@@ -7,6 +7,7 @@ import { SubscriptionGuard } from "@/components/SubscriptionGuard";
 import LoginPage from "@/pages/Login";
 import DashboardPage from "@/pages/Dashboard";
 import LoyaltyPage from "@/pages/Loyalty";
+import PuntosPage from "@/pages/Puntos";
 import RewardClaimPage from "@/pages/RewardClaim";
 import MenuPage from "@/pages/Menu";
 import PromotionsPage from "@/pages/Promotions";
@@ -108,6 +109,7 @@ export default function App() {
             >
               <Route path="/" element={<DashboardPage />} />
               <Route path="/loyalty" element={<LoyaltyPage />} />
+              <Route path="/puntos" element={<PuntosPage />} />
               <Route path="/menu" element={<MenuPage />} />
               <Route path="/promotions" element={<PromotionsPage />} />
               <Route path="/customers" element={<CustomersPage />} />

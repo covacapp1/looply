@@ -626,6 +626,157 @@ export async function createShopCustomer(customer: {
   };
 }
 
+// ========== POINTS ==========
+export interface PointsSettings {
+  enabled: boolean;
+  pesosPerPoint: number;
+}
+
+export interface PointsCustomer {
+  id: string;
+  name: string;
+  phone: string;
+  points: number;
+}
+
+const defaultPointsSettings: PointsSettings = { enabled: false, pesosPerPoint: 100 };
+
+export async function getPointsSettings(userId: string): Promise<PointsSettings> {
+  if (!isSupabaseConfigured() || !supabase) {
+    const local = localStorage.getItem("pointsSettings");
+    return local ? { ...defaultPointsSettings, ...JSON.parse(local) } : defaultPointsSettings;
+  }
+
+  const { data, error } = await supabase
+    .from("points_settings")
+    .select("enabled, pesos_per_point")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || !data) {
+    const local = localStorage.getItem("pointsSettings");
+    return local ? { ...defaultPointsSettings, ...JSON.parse(local) } : defaultPointsSettings;
+  }
+
+  const settings: PointsSettings = {
+    enabled: data.enabled ?? false,
+    pesosPerPoint: data.pesos_per_point || 100,
+  };
+  localStorage.setItem("pointsSettings", JSON.stringify(settings));
+  return settings;
+}
+
+export async function savePointsSettings(userId: string, settings: PointsSettings): Promise<boolean> {
+  if (!isSupabaseConfigured() || !supabase) {
+    localStorage.setItem("pointsSettings", JSON.stringify(settings));
+    return true;
+  }
+
+  const { error } = await supabase
+    .from("points_settings")
+    .upsert({
+      user_id: userId,
+      enabled: settings.enabled,
+      pesos_per_point: settings.pesosPerPoint,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "user_id" });
+
+  if (error) {
+    console.error("Error saving points settings:", error);
+    return false;
+  }
+
+  localStorage.setItem("pointsSettings", JSON.stringify(settings));
+  return true;
+}
+
+export async function getPointsCustomers(merchantId: string): Promise<PointsCustomer[]> {
+  if (!isSupabaseConfigured() || !supabase) return [];
+
+  const { data, error } = await supabase
+    .from("shop_customers")
+    .select("*")
+    .eq("merchant_id", merchantId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching points customers:", error);
+    return [];
+  }
+
+  return data.map((c) => ({
+    id: c.id,
+    name: c.name,
+    phone: c.phone,
+    points: c.points ?? 0,
+  }));
+}
+
+export async function adjustCustomerPoints(
+  customerId: string,
+  delta: number,
+  type: "manual" | "purchase" | "redeem",
+  merchantId: string,
+  note?: string
+): Promise<number | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+
+  const { data: current, error: readError } = await supabase
+    .from("shop_customers")
+    .select("points")
+    .eq("id", customerId)
+    .maybeSingle();
+
+  if (readError || !current) {
+    console.error("Error reading customer points:", readError);
+    return null;
+  }
+
+  const currentPoints = current.points ?? 0;
+  const newPoints = Math.max(0, currentPoints + delta);
+
+  const { data: updated, error: updateError } = await supabase
+    .from("shop_customers")
+    .update({ points: newPoints })
+    .eq("id", customerId)
+    .select("points")
+    .single();
+
+  if (updateError || !updated) {
+    console.error("Error updating customer points:", updateError);
+    return null;
+  }
+
+  // Historial (best-effort, no bloquea si la tabla no existe)
+  await supabase.from("points_history").insert({
+    merchant_id: merchantId,
+    customer_id: customerId,
+    points: newPoints - currentPoints,
+    type,
+    note: note || "",
+  });
+
+  return updated.points ?? 0;
+}
+
+export async function awardPurchasePoints(
+  merchantId: string,
+  customerId: string,
+  total: number,
+  customerName?: string
+): Promise<{ points: number; customerName: string } | null> {
+  const settings = await getPointsSettings(merchantId);
+  if (!settings.enabled || settings.pesosPerPoint <= 0) return null;
+
+  const points = Math.floor(total / settings.pesosPerPoint);
+  if (points <= 0) return null;
+
+  const newTotal = await adjustCustomerPoints(customerId, points, "purchase", merchantId, `Compra de $${total.toLocaleString("es-AR")}`);
+  if (newTotal === null) return null;
+
+  return { points, customerName: customerName || "" };
+}
+
 // ========== ORDERS ==========
 export async function getOrdersByMerchant(merchantId: string): Promise<Order[]> {
   if (!isSupabaseConfigured() || !supabase) return [];
