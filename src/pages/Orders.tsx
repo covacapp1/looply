@@ -130,7 +130,8 @@ export default function OrdersPage() {
           user.id,
           order.customerId,
           order.total,
-          order.customerName
+          order.customerName,
+          order.id
         );
         if (awarded) {
           toast.success(

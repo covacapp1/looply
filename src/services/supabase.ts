@@ -763,16 +763,34 @@ export async function awardPurchasePoints(
   merchantId: string,
   customerId: string,
   total: number,
-  customerName?: string
+  customerName?: string,
+  orderId?: string
 ): Promise<{ points: number; customerName: string } | null> {
   const settings = await getPointsSettings(merchantId);
   if (!settings.enabled || settings.pesosPerPoint <= 0) return null;
 
+  // Si viene de un pedido, verificar que no se hayan otorgado puntos ya
+  // (el shop los otorga al comprar y la confirmación no debe duplicar)
+  if (orderId && isSupabaseConfigured() && supabase) {
+    const { data: order } = await supabase
+      .from("orders")
+      .select("points_awarded")
+      .eq("id", orderId)
+      .maybeSingle();
+    if (order?.points_awarded) return null;
+  }
+
   const points = Math.floor(total / settings.pesosPerPoint);
   if (points <= 0) return null;
 
-  const newTotal = await adjustCustomerPoints(customerId, points, "purchase", merchantId, `Compra de $${total.toLocaleString("es-AR")}`);
+  const historyNote = orderId ? `Compra - pedido ${orderId}` : `Compra de $${total.toLocaleString("es-AR")}`;
+  const newTotal = await adjustCustomerPoints(customerId, points, "purchase", merchantId, historyNote);
   if (newTotal === null) return null;
+
+  // Marcar el pedido como premiado
+  if (orderId && isSupabaseConfigured() && supabase) {
+    await supabase.from("orders").update({ points_awarded: true }).eq("id", orderId);
+  }
 
   return { points, customerName: customerName || "" };
 }

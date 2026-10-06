@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Search, ShoppingCart, DollarSign, CreditCard, Smartphone, Truck, QrCode, ArrowLeft, Plus, Minus, X, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getMenuItems, createSale, getOpenRegister } from "@/services/supabase";
+import { getMenuItems, createSale, getOpenRegister, getPointsCustomers, awardPurchasePoints, type PointsCustomer } from "@/services/supabase";
 import type { MenuItem, ProductVariant } from "@/types";
 import { toast } from "sonner";
 
@@ -48,17 +48,24 @@ export default function CargarVentaPage() {
   // Cart
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
+  // Client (optional, for points)
+  const [clients, setClients] = useState<PointsCustomer[]>([]);
+  const [clientQuery, setClientQuery] = useState("");
+  const [selectedClient, setSelectedClient] = useState<PointsCustomer | null>(null);
+
   // Payment
   const [paymentMethod, setPaymentMethod] = useState("");
 
   const loadData = useCallback(async () => {
     if (!user) return;
-    const [menuData, reg] = await Promise.all([
+    const [menuData, reg, clientsData] = await Promise.all([
       getMenuItems(user.id),
       getOpenRegister(user.id),
+      getPointsCustomers(user.id),
     ]);
     setMenuItems(menuData);
     setHasRegister(!!reg);
+    setClients(clientsData);
     setLoading(false);
   }, [user]);
 
@@ -205,12 +212,27 @@ export default function CargarVentaPage() {
 
     if (sale) {
       toast.success("Venta registrada");
+
+      if (selectedClient) {
+        const awarded = await awardPurchasePoints(
+          user.id,
+          selectedClient.id,
+          total,
+          selectedClient.name
+        );
+        if (awarded) {
+          toast.success(`⭐ +${awarded.points} puntos para ${awarded.customerName}`);
+        }
+      }
+
       setCartItems([]);
       setActiveProductId("");
       setActiveVariants({});
       setActiveQty("1");
       setPaymentMethod("");
       setSearch("");
+      setSelectedClient(null);
+      setClientQuery("");
       loadData();
     }
     setSaving(false);
@@ -218,6 +240,14 @@ export default function CargarVentaPage() {
 
   const total = getCartTotal();
   const activeItem = menuItems.find((m) => m.id === activeProductId);
+
+  const filteredClients = clientQuery
+    ? clients.filter(
+        (c) =>
+          c.name.toLowerCase().includes(clientQuery.toLowerCase()) ||
+          c.phone.includes(clientQuery)
+      )
+    : [];
 
   return (
     <div className="space-y-6">
@@ -502,6 +532,73 @@ export default function CargarVentaPage() {
               })}
             </div>
           </div>
+
+          {/* Client (optional, for points) */}
+          {clients.length > 0 && (
+            <div className="space-y-2">
+              <Label>Cliente (opcional)</Label>
+              {selectedClient ? (
+                <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary/5 px-3 py-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-primary">
+                        {selectedClient.name.charAt(0).toUpperCase() || "?"}
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {selectedClient.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{selectedClient.phone}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-primary/10 flex-shrink-0"
+                    onClick={() => { setSelectedClient(null); setClientQuery(""); }}
+                  >
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar cliente por nombre o celular..."
+                    value={clientQuery}
+                    onChange={(e) => setClientQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                  {clientQuery && (
+                    <div className="absolute z-10 mt-1 w-full max-h-48 overflow-auto rounded-xl border border-border bg-card shadow-lg">
+                      {filteredClients.length === 0 ? (
+                        <p className="px-3 py-2 text-xs text-muted-foreground">
+                          Sin resultados
+                        </p>
+                      ) : (
+                        filteredClients.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted text-left transition-colors"
+                            onClick={() => { setSelectedClient(c); setClientQuery(""); }}
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
+                              <p className="text-xs text-muted-foreground">{c.phone}</p>
+                            </div>
+                            <Badge variant="outline" className="flex-shrink-0 ml-2">
+                              {c.points} pts
+                            </Badge>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Total + Save */}
           <Card className="border-border">

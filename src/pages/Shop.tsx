@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Phone, User, MapPin, StickyNote, Send, Store, ChevronDown, ChevronUp, Clock } from "lucide-react";
-import { findShopCustomer, createShopCustomer, getMenuItems, createOrder, createSale, getBusinessSettings } from "@/services/supabase";
+import { findShopCustomer, createShopCustomer, getMenuItems, createOrder, createSale, getBusinessSettings, awardPurchasePoints } from "@/services/supabase";
 import { notifyMerchant } from "@/services/push";
 import type { MenuItem, ShopCustomer, ProductVariant } from "@/types";
 
@@ -45,6 +45,9 @@ export default function ShopPage() {
 
   // Cart notes
   const [cartNotes, setCartNotes] = useState("");
+
+  // Points earned on last order
+  const [awardedPoints, setAwardedPoints] = useState<number | null>(null);
 
   useEffect(() => {
     if (merchantId) {
@@ -228,6 +231,15 @@ export default function ShopPage() {
         type: "order",
       });
 
+      const awarded = await awardPurchasePoints(
+        merchantId,
+        customer.id,
+        order.total,
+        customer.name,
+        order.id
+      );
+      setAwardedPoints(awarded ? awarded.points : null);
+
       const itemNames = order.items.map((i) => `${i.quantity}x ${i.name}`).join(", ");
       notifyMerchant(
         merchantId,
@@ -344,6 +356,18 @@ export default function ShopPage() {
             </motion.div>
             <h1 className="text-2xl font-bold text-foreground mb-2">¡Pedido Enviado!</h1>
             <p className="text-muted-foreground mb-6">Tu pedido está siendo preparado. Te notificaremos cuando esté listo.</p>
+            {awardedPoints !== null && awardedPoints > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.4 }}
+                className="mb-6 px-4 py-3 rounded-xl bg-amber-100 border border-amber-300"
+              >
+                <p className="text-amber-700 font-semibold">
+                  ⭐ Ganaste {awardedPoints} puntos
+                </p>
+              </motion.div>
+            )}
             <Button onClick={() => setView("menu")} variant="outline">Volver al Menú</Button>
           </div>
         </motion.div>
